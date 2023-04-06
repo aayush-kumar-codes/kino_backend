@@ -1,0 +1,10 @@
+db.sqlite3
+__pycache__
+**/migrations/**
+!**/migrations
+!**/migrations/__init__.py
+media/
+.env
+venv/
+env/
+nohup.out
