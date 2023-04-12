@@ -1,8 +1,8 @@
 from django.urls import path
-from .views import RegisterAPI, LoginAPI, RequestAccessAPI, PasswordChangeAPI
+from .views import RegisterAPI, LoginAPI, RequestAccessAPI, PasswordChangeAPI, LogoutAPI
 
 from rest_framework_simplejwt.views import (
-    TokenRefreshView,
+    TokenRefreshView
 )
 
 # Define URL patterns for the API
@@ -12,6 +12,9 @@ urlpatterns = [
 
     # URL pattern for user login/authentication
     path('login/', LoginAPI.as_view(), name='login'),
+
+    # URL pattern for user logout
+    path('logout/', LogoutAPI.as_view(), name='logout'),
 
     # URL pattern for refreshing JWT tokens
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),

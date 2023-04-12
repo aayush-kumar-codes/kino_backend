@@ -58,4 +58,18 @@ class CommonResponseMiddleware:
                 },
                 status=200
             )
+        elif response.status_code == 403:
+            error_message = getattr(
+                response,
+                'error_message',
+                'You have not permission to perform this Action.'
+            )
+            response = JsonResponse(
+                {
+                  "status": "error",
+                  "message": error_message,
+                  "data": None
+                },
+                status=400
+              )
         return response

@@ -40,9 +40,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
+    'phonenumber_field',
     'rest_framework',
     'corsheaders',
     'users',
+    'school',
 
 ]
 
