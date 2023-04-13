@@ -28,12 +28,12 @@ class CreateSchoolAPI(APIView):
         # Validate the request data and save the new school if validation is successful.
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        
+
         # Return a success message in the response
         response = Response(serializer.data, status=201)
         response.success_message = "School Created."
         return response
-    
+
     def get(self, request, pk=None):
         try:
             school = School.objects.get(id=pk)
@@ -119,14 +119,19 @@ class SchoolHeadAccess(APIView):
 class GetSchoolListAPI(viewsets.ModelViewSet):
     queryset = School.objects.all()
     serializer_class = SchoolSerializer
-    filter_backends = (filters.SearchFilter,)
+    filter_backends = (filters.SearchFilter)
     search_fields = ['name', 'id']
 
     def list(self, request, pk=None):
         queryset = self.queryset
+        print(queryset.__dict__)
+        params = self.request.query_params
         if pk:
             queryset = queryset.filter(pk=pk)
-
+        if params.get("subscription"):
+            queryset = queryset.filter(
+                school_subscription__plan__name=params.get("subscription")
+            )
         serializer = SchoolSerializer(queryset, many=True)
 
         pagination = MyPaginationClass()
