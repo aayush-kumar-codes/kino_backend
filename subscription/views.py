@@ -1,10 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import PlanSerializer, BenefitSerializer
+from .serializers import PlanSerializer, BenefitSerializer, GetPlanSerializer
 from rest_framework.permissions import IsAuthenticated
 from utils.custom_permissions import AdminAccess
-from .models import Plan
-
+from .models import Plan, Benefit
 # Create your views here.
 
 
@@ -57,3 +56,19 @@ class CreateBenefitAPI(APIView):
         response = Response(serializer.data, status=201)
         response.success_message = "Benefit Created."
         return response
+
+
+
+class GetPlan(APIView):
+
+    def get(self, request):
+        plan = Plan.objects.all()
+        benefit = Benefit.objects.all()
+        plans = GetPlanSerializer(plan, many=True)
+        benefits = BenefitSerializer(benefit,many=True)
+        response_data = {
+            'KAINO PACKAGES': plans.data,
+            'BENEFITS':benefits.data
+        }
+        return Response(response_data)
+    

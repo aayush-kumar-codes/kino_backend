@@ -4,17 +4,19 @@ from school.models import School
 # Create your models here.
 
 
-class Plan(models.Model):
-    name = models.CharField(max_length=124)
-    price = models.IntegerField()
-
-    def __str__(self):
-        return self.name
-
-
 class Benefit(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
+
+    def __str__(self):
+        return self.name
+ 
+
+class Plan(models.Model):
+    name = models.CharField(max_length=124)
+    price = models.IntegerField()
+    benefits = models.ManyToManyField(Benefit)
+
 
     def __str__(self):
         return self.name
@@ -26,7 +28,6 @@ class Subscription(models.Model):
         related_name="school_subscription"
     )
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
-    benefits = models.ManyToManyField(Benefit)
     start_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(null=True, blank=True)
     is_paid = models.BooleanField(default=False)
