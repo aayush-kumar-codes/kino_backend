@@ -1,13 +1,14 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
-    SchoolSerializer, CreateSchoolSerializer
-    )
+    SchoolSerializer, CreateSchoolSerializer, TermSerializer,
+    LessionSerializer
+)
 from utils.custom_permissions import (
-    AdminAccess, HeadOfCuricullumAccess)
+    AdminAccess, HeadOfCuricullumAccess, ContentCreatorAccess)
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import School, User
+from .models import School, User, Term, Lession
 from utils.paginations import MyPaginationClass
 from rest_framework import filters, viewsets
 
@@ -120,11 +121,10 @@ class GetSchoolListAPI(viewsets.ModelViewSet):
     queryset = School.objects.all()
     serializer_class = SchoolSerializer
     filter_backends = (filters.SearchFilter)
-    search_fields = ['name', 'id']
+    search_fields = ['name', 'id', 'phone']
 
     def list(self, request, pk=None):
         queryset = self.queryset
-        print(queryset.__dict__)
         params = self.request.query_params
         if pk:
             queryset = queryset.filter(pk=pk)
@@ -132,7 +132,12 @@ class GetSchoolListAPI(viewsets.ModelViewSet):
             queryset = queryset.filter(
                 school_subscription__plan__name=params.get("subscription")
             )
-        serializer = SchoolSerializer(queryset, many=True)
+        if params.get("phone"):
+            queryset = queryset.filter(phone='+' + params.get("phone"))
+
+        serializer = SchoolSerializer(
+            queryset, many=True, context={"request": request}
+        )
 
         pagination = MyPaginationClass()
         paginated_data = pagination.paginate_queryset(

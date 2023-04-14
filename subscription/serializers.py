@@ -9,15 +9,23 @@ class BenefitSerializer(serializers.ModelSerializer):
 
 
 class PlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = ("name", "price", "benefit")
+
+
+class PlansSerializer(serializers.ModelSerializer):
     benefit = serializers.SerializerMethodField()
     currency = serializers.CharField(default="$")
 
     def get_benefit(self, instance):
-        return str(BenefitSerializer.data)
+        benefit = Benefit.objects.all()
+        serializer = BenefitSerializer(benefit, many=True)
+        return serializer.data
 
     class Meta:
         model = Plan
-        fields = ("name", "price", "benefit")
+        fields = ("name", "price", "currency", "benefit")
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):

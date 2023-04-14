@@ -8,6 +8,8 @@ class CommonResponseMiddleware:
     def __call__(self, request):
         if request.path.startswith('/admin'):
             return self.get_response(request)
+        if request.path.startswith('/media'):
+            return self.get_response(request)
         # Get the response object from the view
         response = self.get_response(request)
 

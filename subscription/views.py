@@ -1,11 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import PlanSerializer, BenefitSerializer
+from .serializers import PlanSerializer, BenefitSerializer, PlansSerializer
 from rest_framework.permissions import IsAuthenticated
 from utils.custom_permissions import AdminAccess
 from .models import Plan
-
-# Create your views here.
 
 
 class CreatePlanAPI(APIView):
@@ -30,7 +28,7 @@ class CreatePlanAPI(APIView):
 
     def get(self, request):
         plan = Plan.objects.all()
-        serializer = PlanSerializer(plan, many=True)
+        serializer = PlansSerializer(plan, many=True)
         response = Response({
             "kaino_packages": serializer.data
         }, status=200)

@@ -6,3 +6,7 @@ def get_file_path(instance, filename):
     ext = filename.split('.')[-1]
     filename = "%s.%s" % (uuid.uuid4(), ext)
     return os.path.join('uploads/logos', filename)
+
+
+def generate_absolute_uri(request, url):
+    return request.build_absolute_uri(url)
