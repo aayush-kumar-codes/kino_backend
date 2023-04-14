@@ -201,3 +201,7 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 BACKEND_IP = os.getenv('BACKEND_IP')
 FE_DOMAIN = os.getenv('FE_DOMAIN')
+
+
+# Subscription plan default currency 
+CURRENCY="$"

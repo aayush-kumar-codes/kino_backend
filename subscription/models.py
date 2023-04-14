@@ -19,6 +19,16 @@ class Plan(models.Model):
 
     def __str__(self):
         return self.name
+ 
+
+class Plan(models.Model):
+    name = models.CharField(max_length=124)
+    price = models.IntegerField()
+    benefits = models.ManyToManyField(Benefit)
+
+
+    def __str__(self):
+        return self.name
 
 
 class Subscription(models.Model):
