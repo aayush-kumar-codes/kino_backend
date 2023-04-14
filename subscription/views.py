@@ -27,18 +27,9 @@ class CreatePlanAPI(APIView):
         response.success_message = "Plan Created."
         return response
 
-    def get(self, request):
-        plan = Plan.objects.all()
-        serializer = PlansSerializer(plan, many=True)
-        response = Response({
-            "kaino_packages": serializer.data
-        }, status=200)
-        response.success_message = "Plans."
-        return response
-
 
 class CreateBenefitAPI(APIView):
-    permission_classes = [IsAuthenticated, AdminAccess]
+    permission_classes = (IsAuthenticated, AdminAccess,)
 
     def post(self, request):
 
@@ -58,8 +49,8 @@ class CreateBenefitAPI(APIView):
         return response
 
 
-
 class GetPlan(APIView):
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         plan = Plan.objects.all()
@@ -71,4 +62,3 @@ class GetPlan(APIView):
             'BENEFITS':benefits.data
         }
         return Response(response_data)
-    
