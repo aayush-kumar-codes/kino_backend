@@ -203,5 +203,6 @@ BACKEND_IP = os.getenv('BACKEND_IP')
 FE_DOMAIN = os.getenv('FE_DOMAIN')
 
 
-# Subscription plan default currency 
-CURRENCY="$"
+# Subscription plan default currency
+CURRENCY = "$"
+KINO_PLANS = ["KAINO_SOCIAL", "KAINO_PLUS", "KAINO_BASIC"]

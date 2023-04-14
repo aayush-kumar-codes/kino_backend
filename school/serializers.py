@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import School, Term, Lession
 from utils.helper import generate_absolute_uri
+from django.conf import settings
 
 
 class SchoolSerializer(serializers.ModelSerializer):
@@ -19,7 +20,9 @@ class SchoolSerializer(serializers.ModelSerializer):
 
     def get_logo_img(self, instance):
         request = self.context.get("request")
-        return generate_absolute_uri(request, instance.logo_img.url)
+        if instance.logo_img:
+            return generate_absolute_uri(request, instance.logo_img.url)
+        return ""
 
 
 class CreateSchoolSerializer(serializers.ModelSerializer):
@@ -41,4 +44,16 @@ class SchoolDataSerializer(serializers.ModelSerializer):
         try:
             return instance.school_subscription.last().plan.name
         except Exception:
-            return "KAINO SOCIAL"
+            return settings.KINO_PLANS[0]
+
+
+class TermSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Term
+        fields = ('__all__')
+
+
+class LessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lession
+        fields = ('__all__')

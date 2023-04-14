@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
-    CreateSchoolAPI, SchoolHeadAccess, GetSchoolListAPI
+    CreateSchoolAPI, SchoolHeadAccess, GetSchoolListAPI,
+    CreateTermAPI, TermHeadAccess, GetAllTermsAPI
 )
 
 urlpatterns = [
@@ -13,13 +14,12 @@ urlpatterns = [
     path('head_school/<int:pk>/', SchoolHeadAccess.as_view(), name='head_access'),
 
     # URL pattern for term create/get/update/delete
-    # path('create_term/', CreateTermAPI.as_view(), name='create_term'),
-    # path('term_by_id/<int:pk>/', CreateTermlAPI.as_view(), name='term_by_id'),
-    # path('term/', GetTermListAPI.as_view({'get': 'list'}), name='get_terms'),
-    # path('term/<int:pk>/', GetTermListAPI.as_view({'get': 'list'}), name='get_terms_by_pk'),
+    path('term/', CreateTermAPI.as_view(), name='create_term'),
+    path('term/<int:pk>/', CreateTermAPI.as_view(), name='term_by_id'),
+    path('get_term/', GetAllTermsAPI.as_view(), name='get_term'),
 
     # URL pattern for term by Head of Curicullum
-    # path('head_term/<int:pk>/', TermHeadAccess.as_view(), name='head_term'),
+    path('head_term/<int:pk>/', TermHeadAccess.as_view(), name='head_term'),
 
     # # URL pattern for lession create/get/update/delete
     # path('create_lession/', CreateLessionAPI.as_view(), name='create_lession'),
