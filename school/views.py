@@ -1,14 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
-    SchoolSerializer, CreateSchoolSerializer, TermSerializer
+    SchoolSerializer, CreateSchoolSerializer, TermSerializer,
+    ClassSerializer, LessonSerializer
 )
 from utils.custom_permissions import (
     AdminAccess, HeadOfCuricullumAccess
 )
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import School, User, Term
+from .models import School, Class, Term, Lesson
 from utils.paginations import MyPaginationClass
 from rest_framework import filters, viewsets
 
@@ -47,7 +48,7 @@ class SchoolAPI(APIView):
 
     def patch(self, request, pk=None):
         school = get_object_or_404(School, pk=pk)
-        serializer = SchoolSerializer(school, data=request.data)
+        serializer = SchoolSerializer(school, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response = Response(serializer.data, status=200)
@@ -77,7 +78,7 @@ class SchoolHeadAccess(APIView):
 
     def patch(self, request, pk=None):
         school = get_object_or_404(School, pk=pk)
-        serializer = SchoolSerializer(school, data=request.data)
+        serializer = SchoolSerializer(school, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response = Response(serializer.data, status=200)
@@ -159,7 +160,9 @@ class TermAPI(APIView):
 
     def patch(self, request, pk=None):
         term = get_object_or_404(Term, pk=pk)
-        serializer = TermSerializer(term, data=request.data)
+        serializer = TermSerializer(
+            term, data=request.data, partial=True
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response = Response(serializer.data, status=200)
@@ -174,11 +177,11 @@ class TermAPI(APIView):
         return response
 
 
-class GetAllTermsAPI(APIView):
+class AllTermsAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        queryset = Term.objects.values_list('term_name', flat=True)
+        queryset = Term.objects.values("id", "term_name")
         response = Response(list(queryset), status=200)
         response.success_message = "Term Data."
         return response
@@ -196,9 +199,115 @@ class TermHeadAccess(APIView):
 
     def patch(self, request, pk=None):
         term = get_object_or_404(Term, pk=pk)
-        serializer = TermSerializer(term, data=request.data)
+        serializer = TermSerializer(term, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response = Response(serializer.data, status=200)
         response.success_message = "Term System Updated."
+        return response
+
+
+class ClassAPI(APIView):
+    permission_classes = (IsAuthenticated,)  # give permission to schoolaccess.
+
+    def post(self, request):
+
+        # Initialize a TermSerializer with the request data
+        serializer = ClassSerializer(data=request.data)
+
+        # Validate the request data and save the new term if validation is successful
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return a success message in the response
+        response = Response(serializer.data, status=201)
+        response.success_message = "Class Created."
+        return response
+
+    def get(seif, request, pk=None):
+        queryset = Class.objects.all()
+        if pk:
+            queryset = queryset.filter(pk=pk)
+        serializer = ClassSerializer(queryset, many=True)
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Class Data."
+        return response
+
+
+class LessonAPI(APIView):
+    permission_classes = (IsAuthenticated, AdminAccess,)
+
+    def post(self, request):
+
+        _class_name = request.data.pop("_class", "NA")
+        _class, _ = Class.objects.get_or_create(name=_class_name)
+        # Initialize a LessonSerializer with the request data
+        serializer = LessonSerializer(data=request.data)
+
+        # Validate the request data and save the new lession if validation is successful
+        serializer.is_valid(raise_exception=True)
+        serializer.save(_class=_class)
+
+        # Return a success message in the response
+        response = Response(serializer.data, status=201)
+        response.success_message = "Lesson Created."
+        return response
+
+    def patch(self, request, pk=None):
+        lesson = get_object_or_404(Lesson, pk=pk)
+        serializer = LessonSerializer(lesson, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response = Response(serializer.data, status=200)
+        response.success_message = "Lesson Updated."
+        return response
+
+    def delete(self, request, pk=None):
+        lesson = get_object_or_404(Lesson, pk=pk)
+        lesson.delete()
+        response = Response(status=200)
+        response.success_message = "Lesson Deleted Successfully."
+        return response
+
+
+class GetLessonListAPI(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
+    filter_backends = (filters.SearchFilter)
+    search_fields = ['id', 'name']
+
+    def list(self, request, pk=None):
+        queryset = self.queryset
+        params = self.request.query_params
+        if pk:
+            queryset = queryset.filter(pk=pk)
+        if params.get("name"):
+            queryset = queryset.filter(
+                name=params.get("name")
+            )
+        if params.get("class"):
+            queryset = queryset.filter(
+                _class__name=params.get("class")
+            )
+
+        serializer = LessonSerializer(
+            queryset, many=True, context={"request": request}
+        )
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Lesson Data."
         return response
