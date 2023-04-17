@@ -40,9 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
+    'phonenumber_field',
     'rest_framework',
     'corsheaders',
     'users',
+    'school',
+    'subscription',
 
 ]
 
@@ -99,7 +102,7 @@ DATABASES = {
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'), 
+        'PORT': os.getenv('DB_PORT'),
     }
 }
 
@@ -198,3 +201,8 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 BACKEND_IP = os.getenv('BACKEND_IP')
 FE_DOMAIN = os.getenv('FE_DOMAIN')
+
+
+# Subscription plan default currency
+CURRENCY = "$"
+KINO_PLANS = ["KAINO_SOCIAL", "KAINO_PLUS", "KAINO_BASIC"]

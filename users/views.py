@@ -16,9 +16,12 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from .custom_token import account_activation_token
 from django.utils.encoding import force_bytes, force_str
 from utils.hardcoded import FORGOT_PASSWORD_URL
-
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import logout
 
 # Create your views here.
+
+
 class RegisterAPI(APIView):
     """
     This class-based view handles user registration requests.
@@ -82,6 +85,16 @@ class LoginAPI(APIView):
         # Return the response with the data and a 200 status code
         response = Response(data, status=200)
         response.success_message = "Login successfully."
+        return response
+
+
+class LogoutAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args):
+        logout(request)
+        response = Response(status=200)
+        response.success_message = "Logout successfully."
         return response
 
 

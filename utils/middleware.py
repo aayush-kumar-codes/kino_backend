@@ -8,6 +8,8 @@ class CommonResponseMiddleware:
     def __call__(self, request):
         if request.path.startswith('/admin'):
             return self.get_response(request)
+        if request.path.startswith('/media'):
+            return self.get_response(request)
         # Get the response object from the view
         response = self.get_response(request)
 
@@ -58,4 +60,18 @@ class CommonResponseMiddleware:
                 },
                 status=200
             )
+        elif response.status_code == 403:
+            error_message = getattr(
+                response,
+                'error_message',
+                'You have not permission to perform this Action.'
+            )
+            response = JsonResponse(
+                {
+                  "status": "error",
+                  "message": error_message,
+                  "data": None
+                },
+                status=400
+              )
         return response

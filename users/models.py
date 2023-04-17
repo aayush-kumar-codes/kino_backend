@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from .managers import UserManager
 from utils.helper import get_file_path
 
+
 # Custom User model extending Django's AbstractUser
 class User(AbstractUser):
     # Role constants
@@ -10,6 +11,9 @@ class User(AbstractUser):
     Teacher = 2
     Student = 3
     Parent = 4
+    Head_of_curicullum = 5
+    Content_creator = 6
+    Finance = 7
 
     # Role choices tuple for the role field
     ROLE_CHOICES = (
@@ -17,6 +21,9 @@ class User(AbstractUser):
         (Student, 'Student'),
         (Teacher, 'Teacher'),
         (Parent, 'Parent'),
+        (Head_of_curicullum, 'Head_of_curicullum'),
+        (Content_creator, 'Content_creator'),
+        (Finance, 'Finance'),
     )
 
     # Gender constants
