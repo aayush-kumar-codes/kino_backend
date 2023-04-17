@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import School, Term, Lession
+from .models import School, Term, Lesson
 from utils.helper import generate_absolute_uri
 from django.conf import settings
 
@@ -53,7 +53,7 @@ class TermSerializer(serializers.ModelSerializer):
         fields = ('__all__')
 
 
-class LessionSerializer(serializers.ModelSerializer):
+class LessonSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Lession
+        model = Lesson
         fields = ('__all__')

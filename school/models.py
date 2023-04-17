@@ -46,17 +46,21 @@ class School(models.Model):
     country = models.CharField(max_length=124)
     description = models.CharField(max_length=512)
     cover = models.ImageField(upload_to=get_file_path, null=True, blank=True)
-    logo_img = models.ImageField(upload_to=get_file_path, null=True, blank=True)
+    logo_img = models.ImageField(
+        upload_to=get_file_path, null=True, blank=True
+    )
 
     def __str__(self):
         return self.name
 
 
-class Lession(models.Model):
+class Lesson(models.Model):
     name = models.CharField(max_length=124)
     _class = models.CharField(max_length=50)
     learning_area = models.CharField(max_length=100)
-    term = models.ForeignKey(Term, on_delete=models.CASCADE, null=True, blank=True)
+    term = models.ForeignKey(
+        Term, on_delete=models.CASCADE, null=True, blank=True
+    )
     week = models.CharField(max_length=10)
     country = models.CharField(max_length=124)
 

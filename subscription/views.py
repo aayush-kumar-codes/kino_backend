@@ -8,7 +8,7 @@ from .models import Plan, Benefit
 
 
 class CreatePlanAPI(APIView):
-    # permission_classes = [IsAuthenticated, AdminAccess]
+    permission_classes = (IsAuthenticated, AdminAccess,)
 
     def post(self, request):
 
@@ -56,9 +56,9 @@ class GetPlan(APIView):
         plan = Plan.objects.all()
         benefit = Benefit.objects.all()
         plans = GetPlanSerializer(plan, many=True)
-        benefits = BenefitSerializer(benefit,many=True)
+        benefits = BenefitSerializer(benefit, many=True)
         response_data = {
             'KAINO PACKAGES': plans.data,
-            'BENEFITS':benefits.data
+            'BENEFITS': benefits.data
         }
         return Response(response_data)

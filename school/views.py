@@ -15,7 +15,7 @@ from rest_framework import filters, viewsets
 # Create your views here.
 
 
-class CreateSchoolAPI(APIView):
+class SchoolAPI(APIView):
     permission_classes = [IsAuthenticated, AdminAccess]
 
     def post(self, request):
@@ -36,48 +36,30 @@ class CreateSchoolAPI(APIView):
         return response
 
     def get(self, request, pk=None):
-        try:
-            school = School.objects.get(id=pk)
-            teachers = school.users.filter(role=User.Teacher)
-            students = school.users.filter(role=User.Student)
-            print(teachers.count(), students.count())
-            serializer = SchoolSerializer(school)
-            response = Response({
-                "data": serializer.data,
-                "total_teachers": teachers.count(),
-            }, status=200)
-            response.success_message = "School Data."
-            return response
-        except Exception:
-            response = Response(status=400)
-            response.error_message = "School Data not found."
-            return response
+        school = get_object_or_404(School, pk=pk)
+        serializer = SchoolSerializer(school)
+        response = Response({
+            "data": serializer.data,
+            "total_teachers": school.total_teachers,
+        }, status=200)
+        response.success_message = "School Data."
+        return response
 
     def patch(self, request, pk=None):
-        try:
-            data = School.objects.get(pk=pk)
-            serializer = SchoolSerializer(data, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            response = Response(serializer.data, status=200)
-            response.success_message = "School Updated."
-            return response
-        except Exception:
-            response = Response(status=400)
-            response.error_message = "School Data not found."
-            return response
+        school = get_object_or_404(School, pk=pk)
+        serializer = SchoolSerializer(school, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response = Response(serializer.data, status=200)
+        response.success_message = "School Updated."
+        return response
 
     def delete(self, request, pk=None):
-        try:
-            school = get_object_or_404(School, pk=pk)
-            school.delete()
-            response = Response(status=200)
-            response.success_message = "School Deleted Successfully."
-            return response
-        except Exception:
-            response = Response(status=400)
-            response.error_message = "School Data not found."
-            return response
+        school = get_object_or_404(School, pk=pk)
+        school.delete()
+        response = Response(status=200)
+        response.success_message = "School Deleted Successfully."
+        return response
 
 
 # Access by only School Head of Curricullum
@@ -85,39 +67,26 @@ class SchoolHeadAccess(APIView):
     permission_classes = [IsAuthenticated, HeadOfCuricullumAccess]
 
     def get(self, request, pk=None):
-        try:
-            school = School.objects.get(id=pk)
-            teachers = school.users.filter(role=User.Teacher)
-            students = school.users.filter(role=User.Student)
-            print(teachers.count(), students.count())
-            serializer = SchoolSerializer(school)
-            response = Response({
-                "data": serializer.data,
-                "total_teachers": teachers.count(),
-            }, status=200)
-            response.success_message = "School Data."
-            return response
-        except Exception:
-            response = Response(status=400)
-            response.error_message = "School Data not found."
-            return response
+        school = get_object_or_404(School, pk=pk)
+        serializer = SchoolSerializer(school)
+        response = Response({
+            "data": serializer.data,
+        }, status=200)
+        response.success_message = "School Data."
+        return response
 
     def patch(self, request, pk=None):
-        try:
-            data = School.objects.get(pk=pk)
-            serializer = SchoolSerializer(data, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            response = Response(serializer.data, status=200)
-            response.success_message = "School Updated."
-            return response
-        except Exception:
-            response = Response(status=400)
-            response.error_message = "School Data not found."
-            return response
+        school = get_object_or_404(School, pk=pk)
+        serializer = SchoolSerializer(school, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response = Response(serializer.data, status=200)
+        response.success_message = "School Updated."
+        return response
 
 
 class GetSchoolListAPI(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
     queryset = School.objects.all()
     serializer_class = SchoolSerializer
     filter_backends = (filters.SearchFilter)
@@ -152,7 +121,7 @@ class GetSchoolListAPI(viewsets.ModelViewSet):
         return response
 
 
-class CreateTermAPI(APIView):
+class TermAPI(APIView):
     permission_classes = [IsAuthenticated, AdminAccess]
 
     def post(self, request):
@@ -189,8 +158,8 @@ class CreateTermAPI(APIView):
         return response
 
     def patch(self, request, pk=None):
-        data = get_object_or_404(Term, pk=pk)
-        serializer = TermSerializer(data, data=request.data)
+        term = get_object_or_404(Term, pk=pk)
+        serializer = TermSerializer(term, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response = Response(serializer.data, status=200)
@@ -226,8 +195,8 @@ class TermHeadAccess(APIView):
         return response
 
     def patch(self, request, pk=None):
-        data = get_object_or_404(Term, pk=pk)
-        serializer = TermSerializer(data, data=request.data)
+        term = get_object_or_404(Term, pk=pk)
+        serializer = TermSerializer(term, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response = Response(serializer.data, status=200)
