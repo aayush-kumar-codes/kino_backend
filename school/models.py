@@ -54,14 +54,27 @@ class School(models.Model):
         return self.name
 
 
+class Class(models.Model):
+    name = models.CharField(max_length=50)
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    def __str__(self):
+        return self.name
+
+
 class Lesson(models.Model):
     name = models.CharField(max_length=124)
-    _class = models.CharField(max_length=50)
+    subject_id = models.CharField(max_length=124)
+    _class = models.ForeignKey(
+        Class, on_delete=models.CASCADE, null=True,
+        blank=True, related_name="lesson_class"
+    )
     learning_area = models.CharField(max_length=100)
     term = models.ForeignKey(
-        Term, on_delete=models.CASCADE, null=True, blank=True
+        Term, on_delete=models.CASCADE, related_name="lesson_term"
     )
-    week = models.CharField(max_length=10)
+    week = models.IntegerField()
     country = models.CharField(max_length=124)
 
     def __str__(self):
