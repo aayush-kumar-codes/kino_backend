@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from .models import School, Class, Term, Lesson
 from utils.paginations import MyPaginationClass
 from rest_framework import filters, viewsets
-
+from datetime import datetime
 # Create your views here.
 
 
@@ -65,14 +65,12 @@ class SchoolAPI(APIView):
 
 # Access by only School Head of Curricullum
 class SchoolHeadAccess(APIView):
-    permission_classes = [IsAuthenticated, HeadOfCuricullumAccess]
+    permission_classes = (IsAuthenticated, HeadOfCuricullumAccess,)
 
     def get(self, request, pk=None):
         school = get_object_or_404(School, pk=pk)
-        serializer = SchoolSerializer(school)
-        response = Response({
-            "data": serializer.data,
-        }, status=200)
+        serializer = SchoolSerializer(school, context={"request": request})
+        response = Response(serializer.data, status=200)
         response.success_message = "School Data."
         return response
 
@@ -247,7 +245,13 @@ class LessonAPI(APIView):
     def post(self, request):
 
         _class_name = request.data.pop("_class", "NA")
-        _class, _ = Class.objects.get_or_create(name=_class_name)
+        _class, _ = Class.objects.get_or_create(
+            name=_class_name,
+            defaults={
+                "start_date": datetime.today(),
+                "end_date": datetime.today()
+            }
+        )
         # Initialize a LessonSerializer with the request data
         serializer = LessonSerializer(data=request.data)
 
@@ -262,9 +266,17 @@ class LessonAPI(APIView):
 
     def patch(self, request, pk=None):
         lesson = get_object_or_404(Lesson, pk=pk)
+        _class_name = request.data.pop("_class", "NA")
+        _class, _ = Class.objects.get_or_create(
+            name=_class_name,
+            defaults={
+                "start_date": datetime.today(),
+                "end_date": datetime.today()
+            }
+        )
         serializer = LessonSerializer(lesson, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(_class=_class)
         response = Response(serializer.data, status=200)
         response.success_message = "Lesson Updated."
         return response

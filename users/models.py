@@ -2,6 +2,15 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .managers import UserManager
 from utils.helper import get_file_path
+from phonenumber_field.modelfields import PhoneNumberField
+
+
+class CustomPermission(models.Model):
+    code_name = models.CharField(max_length=100)
+    code_id = models.IntegerField()
+
+    def __str__(self):
+        return f"{self.code_name} {self.code_id}"
 
 
 # Custom User model extending Django's AbstractUser
@@ -43,7 +52,7 @@ class User(AbstractUser):
         choices=GENDER, blank=True, null=True
     )
     dob = models.DateField(null=True, blank=True)
-    mobile_no = models.CharField(max_length=10, blank=True)
+    mobile_no = PhoneNumberField(null=True, blank=True)
     address = models.CharField(max_length=512, blank=True)
     zip_code = models.CharField(max_length=10, blank=True)
     profile_img = models.ImageField(
@@ -52,6 +61,9 @@ class User(AbstractUser):
         blank=True, default=None
     )
     remember_me = models.BooleanField(default=False)
+    permission = models.ManyToManyField(
+        CustomPermission, related_name="user_permission"
+    )
 
     # Required fields for Django's AbstractUser
     USERNAME_FIELD = 'email'
@@ -59,3 +71,7 @@ class User(AbstractUser):
 
     # Custom User manager
     objects = UserManager()
+
+    def save(self, *args, **kwargs):
+        self.username = self.email
+        super().save(*args, **kwargs)
