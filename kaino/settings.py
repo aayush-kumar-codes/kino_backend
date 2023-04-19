@@ -59,6 +59,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "utils.middleware.CommonResponseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
 
 ]
 
@@ -206,3 +207,6 @@ FE_DOMAIN = os.getenv('FE_DOMAIN')
 # Subscription plan default currency
 CURRENCY = "$"
 KINO_PLANS = ["KAINO_SOCIAL", "KAINO_PLUS", "KAINO_BASIC"]
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SESSION_COOKIE_AGE = 86400  # One day in seconds

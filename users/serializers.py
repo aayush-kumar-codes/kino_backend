@@ -32,7 +32,6 @@ class AccessRequestSerializer(serializers.Serializer):
 
 class RoleSerializer(serializers.ModelSerializer):
     last_active = serializers.SerializerMethodField(read_only=True)
-    id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
@@ -43,6 +42,3 @@ class RoleSerializer(serializers.ModelSerializer):
 
     def get_last_active(self, instance):
         return str(instance.last_login).split()[0]
-
-    def get_id(self, instance):
-        return instance.id

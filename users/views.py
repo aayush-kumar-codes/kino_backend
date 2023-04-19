@@ -53,7 +53,7 @@ class RegisterAPI(APIView):
         serializer.save()
 
         # Return a success message in the response
-        response = Response(serializer.data, status=201)
+        response = Response(serializer.data, status=200)
         response.success_message = "User Created."
         return response
 
@@ -66,6 +66,8 @@ class LoginAPI(APIView):
     # Define the post method to handle HTTP POST requests
     def post(self, request, format=None):
         user = get_object_or_404(User, email=request.data["username"])
+        user.remember_me = int(request.data.get("remember_me", 1))
+        user.save()
         if user.is_active:
             # Deserialize the request data using the AuthTokenSerializer
             serializer = AuthTokenSerializer(data=request.data)
@@ -75,7 +77,9 @@ class LoginAPI(APIView):
             user = serializer.validated_data['user']
             # Generate a refresh token for the user
             refresh = RefreshToken.for_user(user)
-
+            if user.remember_me:
+                request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+                request.session.modified = True
             # Prepare the response data, including user details and tokens
             data = {
                 'id': user.id,
@@ -209,27 +213,35 @@ class UserRolesAPI(APIView):
         serializer.save()
 
         # Return a success message in the response
-        response = Response(serializer.data, status=201)
+        response = Response(serializer.data, status=200)
         response.success_message = "Role Created."
         return response
 
     def get(self, request):
         queryset = User.objects.all()
+
         params = self.request.query_params
-        admin = queryset.filter(role=User.Admin)
-        head_of_curicullum = queryset.filter(role=User.Head_of_curicullum)
-        content_creator = queryset.filter(role=User.Content_creator)
-        finance = queryset.filter(role=User.Finance)
-        roles = Q(role=User.Admin) | Q(role=User.Head_of_curicullum) | Q(role=User.Content_creator) | Q(role=User.Finance)
-        queryset = queryset.filter(roles)
+
+        admin_roles = queryset.filter(role=User.Admin)
+        head_of_curicullum_roles = queryset.filter(role=User.Head_of_curicullum)
+
+        content_creator_roles = queryset.filter(role=User.Content_creator)
+        finance_roles = queryset.filter(role=User.Finance)
+
+        queryset = queryset.filter(
+            role__in=[
+                User.Admin, User.Head_of_curicullum,
+                User.Content_creator, User.Finance
+            ]
+        )
         if params.get("admin"):
-            queryset = queryset.filter(role=User.Admin)
+            queryset = admin_roles
         if params.get("head_of_curicullum"):
-            queryset = queryset.filter(role=User.Head_of_curicullum)
+            queryset = head_of_curicullum_roles
         if params.get("content_creator"):
-            queryset = queryset.filter(role=User.Content_creator)
+            queryset = content_creator_roles
         if params.get("finance"):
-            queryset = queryset.filter(role=User.Finance)
+            queryset = finance_roles
 
         serializer = RoleSerializer(queryset, many=True)
         pagination = MyPaginationClass()
@@ -237,10 +249,10 @@ class UserRolesAPI(APIView):
             serializer.data, request
         )
         paginated_response = pagination.get_paginated_response({
-            "admin": admin.count(),
-            "head_of_curicullum": head_of_curicullum.count(),
-            "content_creater": content_creator.count(),
-            "finance": finance.count(),
+            "admin": admin_roles.count(),
+            "head_of_curicullum": head_of_curicullum_roles.count(),
+            "content_creater": content_creator_roles.count(),
+            "finance": finance_roles.count(),
             "data": paginated_data
         }
         ).data
