@@ -2,12 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
     UserSerializer, PasswordSerializer,
-    AccessRequestSerializer
+    AccessRequestSerializer, RoleSerializer
 )
 from rest_framework import permissions, status
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+from .models import User, CustomPermission
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
@@ -18,7 +18,9 @@ from django.utils.encoding import force_bytes, force_str
 from utils.hardcoded import FORGOT_PASSWORD_URL
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import logout
-
+from utils.custom_permissions import AdminAccess, PermissonChoices, TeacherAccess
+from django.db.models import Q
+from utils.paginations import MyPaginationClass
 # Create your views here.
 
 
@@ -51,7 +53,7 @@ class RegisterAPI(APIView):
         serializer.save()
 
         # Return a success message in the response
-        response = Response(serializer.data, status=201)
+        response = Response(serializer.data, status=200)
         response.success_message = "User Created."
         return response
 
@@ -63,29 +65,39 @@ class LoginAPI(APIView):
 
     # Define the post method to handle HTTP POST requests
     def post(self, request, format=None):
-        # Deserialize the request data using the AuthTokenSerializer
-        serializer = AuthTokenSerializer(data=request.data)
-        # Validate the deserialized data and raise an exception if validation fails
-        serializer.is_valid(raise_exception=True)
-        # Get the user object from the validated data
-        user = serializer.validated_data['user']
-        # Generate a refresh token for the user
-        refresh = RefreshToken.for_user(user)
-
-        # Prepare the response data, including user details and tokens
-        data = {
-            'id': user.id,
-            'role': user.role,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        }
-        # Return the response with the data and a 200 status code
-        response = Response(data, status=200)
-        response.success_message = "Login successfully."
-        return response
+        user = get_object_or_404(User, email=request.data["username"])
+        user.remember_me = int(request.data.get("remember_me", 1))
+        user.save()
+        if user.is_active:
+            # Deserialize the request data using the AuthTokenSerializer
+            serializer = AuthTokenSerializer(data=request.data)
+            # Validate the deserialized data and raise an exception if validation fails
+            serializer.is_valid(raise_exception=True)
+            # Get the user object from the validated data
+            user = serializer.validated_data['user']
+            # Generate a refresh token for the user
+            refresh = RefreshToken.for_user(user)
+            if user.remember_me:
+                request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+                request.session.modified = True
+            # Prepare the response data, including user details and tokens
+            data = {
+                'id': user.id,
+                'role': user.role,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+            # Return the response with the data and a 200 status code
+            response = Response(data, status=200)
+            response.success_message = "Login successfully."
+            return response
+        else:
+            response = Response(status=200)
+            response.error_message = "Your account is Disabled."
+            return response
 
 
 class LogoutAPI(APIView):
@@ -187,3 +199,84 @@ class PasswordChangeAPI(APIView):
             response = Response(status=400)
             response.error_message = str(e)
             return response
+
+
+class UserRolesAPI(APIView):
+    permission_classes = (IsAuthenticated, AdminAccess,)
+
+    def post(self, request):
+        # Initialize a CreateRoleSerializer with the request data
+        serializer = RoleSerializer(data=request.data)
+
+        # Validate the request data and save the new event if validation is successful.
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return a success message in the response
+        response = Response(serializer.data, status=200)
+        response.success_message = "Role Created."
+        return response
+
+    def get(self, request):
+        queryset = User.objects.all()
+
+        params = self.request.query_params
+
+        admin_roles = queryset.filter(role=User.Admin)
+        head_of_curicullum_roles = queryset.filter(role=User.Head_of_curicullum)
+
+        content_creator_roles = queryset.filter(role=User.Content_creator)
+        finance_roles = queryset.filter(role=User.Finance)
+
+        queryset = queryset.filter(
+            role__in=[
+                User.Admin, User.Head_of_curicullum,
+                User.Content_creator, User.Finance
+            ]
+        )
+        if params.get("admin"):
+            queryset = admin_roles
+        if params.get("head_of_curicullum"):
+            queryset = head_of_curicullum_roles
+        if params.get("content_creator"):
+            queryset = content_creator_roles
+        if params.get("finance"):
+            queryset = finance_roles
+
+        serializer = RoleSerializer(queryset, many=True)
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response({
+            "admin": admin_roles.count(),
+            "head_of_curicullum": head_of_curicullum_roles.count(),
+            "content_creater": content_creator_roles.count(),
+            "finance": finance_roles.count(),
+            "data": paginated_data
+        }
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "data fetch Successfully."
+        return response
+
+    def delete(self, request, pk=None):
+        user = get_object_or_404(User, pk=pk)
+        user.is_active = False
+        user.save()
+        response = Response(status=200)
+        response.success_message = "User disabled Successfully."
+        return response
+
+
+class PermissionView(APIView):
+    permission_classes = (IsAuthenticated, AdminAccess,)
+
+    def get(self, request):
+
+        permissions = CustomPermission.objects.all().values(
+            "id", "code_name"
+        ).distinct()
+        response = Response(list(permissions), status=200)
+        response.success_message = "Permissions"
+        return response

@@ -1,6 +1,8 @@
 from django.urls import path
-from .views import RegisterAPI, LoginAPI, RequestAccessAPI, PasswordChangeAPI, LogoutAPI
-
+from .views import (
+    RegisterAPI, LoginAPI, RequestAccessAPI, PasswordChangeAPI,
+    LogoutAPI, UserRolesAPI, PermissionView
+)
 from rest_framework_simplejwt.views import (
     TokenRefreshView
 )
@@ -24,4 +26,10 @@ urlpatterns = [
 
     # URL pattern for changing user password
     path('change_password/', PasswordChangeAPI.as_view(), name='change_password'),
+
+    path('role/', UserRolesAPI.as_view(), name='roles_by_admin'),
+    path('role/<int:pk>/', UserRolesAPI.as_view(), name='roles_by_admin'),
+
+    path('permissions/', PermissionView.as_view(), name='permission_list'),
+
 ]

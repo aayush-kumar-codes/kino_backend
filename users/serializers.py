@@ -28,3 +28,17 @@ class PasswordSerializer(serializers.Serializer):
 
 class AccessRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    last_active = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "id", "first_name", "last_name", "profile_img",
+            "email", "role", "last_active", "permission"
+        )
+
+    def get_last_active(self, instance):
+        return str(instance.last_login).split()[0]
