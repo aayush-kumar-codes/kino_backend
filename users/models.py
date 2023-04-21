@@ -108,3 +108,19 @@ class OTP(models.Model):
         self.otp = random.randint(100000, 999999)
         self.expire_time = datetime.now() + timedelta(minutes=5)
         super().save(*args, **kwargs)
+
+
+class Parent(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="parent", primary_key=True
+    )
+    occupation = models.CharField(max_length=124)
+    assigned_students = models.IntegerField()
+    nin = models.CharField(max_length=255)
+    address = models.CharField(max_length=255)
+    city = models.CharField(max_length=124)
+    region = models.CharField(max_length=124)
+    country = models.CharField(max_length=124)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name}"

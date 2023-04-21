@@ -3,12 +3,13 @@ from rest_framework.response import Response
 from .serializers import (
     UserSerializer, PasswordSerializer,
     AccessRequestSerializer, RoleSerializer, ActivitySerializer,
-    UpdateConfigSerializer, TwoFALoginSerializer, UpdatePasswordSerializer
+    UpdateConfigSerializer, TwoFALoginSerializer, UpdatePasswordSerializer,
+    ParentSerializer
 )
 from rest_framework import permissions, status
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, CustomPermission, ActivityLog, OTP
+from .models import User, CustomPermission, ActivityLog, OTP, Parent
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
@@ -25,6 +26,7 @@ from school.models import School
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from .utils import OTPgenerate
+from rest_framework import filters, viewsets
 
 # Create your views here.
 
@@ -308,7 +310,6 @@ class ActivityAPI(APIView):
     def get(self, request):
         queryset = ActivityLog.objects.all()
         activity = queryset.filter(user=request.user.id)
-        print(activity, "activity")
         serializer = ActivitySerializer(activity, many=True)
         pagination = MyPaginationClass()
         paginated_data = pagination.paginate_queryset(
@@ -432,4 +433,34 @@ class VerifyOTP(APIView):
                 return response
         response = Response(status=400)
         response.error_message = "Invalid username or password."
+        return response
+
+
+class GetParentListAPI(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    queryset = Parent.objects.all()
+    serializer_class = ParentSerializer
+    filter_backends = (filters.SearchFilter)
+    search_fields = ['id', 'phone']
+
+    def list(self, request, pk=None):
+        queryset = self.queryset
+        params = self.request.query_params
+        if pk:
+            queryset = queryset.filter(pk=pk)
+        if params.get("country"):
+            queryset = queryset.filter(country=params.get("country"))
+
+        serializer = ParentSerializer(
+            queryset, many=True
+        )
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Parent Data."
         return response
