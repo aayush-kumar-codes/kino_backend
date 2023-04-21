@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     RegisterAPI, LoginAPI, RequestAccessAPI, PasswordChangeAPI,
     LogoutAPI, UserRolesAPI, PermissionView, ActivityAPI, UpdateConfig,
-    UpdatePasswordAPIView, DashboardAPI, ActivityAction, VerifyOTP
+    UpdatePasswordAPIView, DashboardAPI, ActivityAction, VerifyOTP,
+    GetParentListAPI
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView
@@ -39,5 +40,9 @@ urlpatterns = [
     path('dashboard/', DashboardAPI.as_view(), name='dashboard'),
     path('active_status/', ActivityAction.as_view(), name='active_status'),
     path('verify_otp/', VerifyOTP.as_view(), name='verify_otp'),
+
+    path('parent_search/', GetParentListAPI.as_view({'get': 'list'}), name='parent_search'),
+    path('parent_search/<int:pk>/', GetParentListAPI.as_view({'get': 'list'}), name='parent_search_by_id'),
+
 
 ]

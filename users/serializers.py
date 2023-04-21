@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, ActivityLog
+from .models import User, ActivityLog, Parent
 
 
 # UserSerializer: Serializer for User model
@@ -66,3 +66,26 @@ class UpdatePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField()
     new_password = serializers.CharField()
     re_password = serializers.CharField()
+
+
+class UserDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id", "username", "email", "password", "first_name",
+            "last_name", "gender", "dob", "mobile_no", "profile_img",
+        )
+
+
+class ParentSerializer(serializers.ModelSerializer):
+    user = UserDataSerializer()
+
+    class Meta:
+        model = Parent
+        fields = ("__all__")
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user = User.objects.create(**user_data, role=User.Parent)
+        parent = Parent.objects.create(user=user, **validated_data)
+        return parent
