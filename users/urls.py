@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
     RegisterAPI, LoginAPI, RequestAccessAPI, PasswordChangeAPI,
-    LogoutAPI, UserRolesAPI, PermissionView
+    LogoutAPI, UserRolesAPI, PermissionView, ActivityAPI, UpdateConfig,
+    UpdatePasswordAPIView, DashboardAPI, ActivityAction, VerifyOTP
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView
@@ -31,5 +32,12 @@ urlpatterns = [
     path('role/<int:pk>/', UserRolesAPI.as_view(), name='roles_by_admin'),
 
     path('permissions/', PermissionView.as_view(), name='permission_list'),
+
+    path('activity/', ActivityAPI.as_view(), name='activity'),
+    path('config/', UpdateConfig.as_view(), name='config'),
+    path('password/', UpdatePasswordAPIView.as_view(), name='password'),
+    path('dashboard/', DashboardAPI.as_view(), name='dashboard'),
+    path('active_status/', ActivityAction.as_view(), name='active_status'),
+    path('verify_otp/', VerifyOTP.as_view(), name='verify_otp'),
 
 ]

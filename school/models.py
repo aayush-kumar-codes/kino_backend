@@ -37,7 +37,7 @@ class School(models.Model):
     total_students = models.IntegerField()
     total_teachers = models.IntegerField(null=True, blank=True)
     principal_name = models.CharField(max_length=124)
-    phone = PhoneNumberField()
+    phone = PhoneNumberField(unique=True)
     website_url = models.URLField(max_length=255)
     email = models.EmailField(unique=True)
     address = models.CharField(max_length=255, null=True, blank=True)
