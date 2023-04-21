@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, ActivityLog
 
 
 # UserSerializer: Serializer for User model
@@ -42,3 +42,27 @@ class RoleSerializer(serializers.ModelSerializer):
 
     def get_last_active(self, instance):
         return str(instance.last_login).split()[0]
+
+
+class ActivitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ActivityLog
+        fields = ("__all__")
+
+
+class UpdateConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("is_activity_log", "is_two_factor",)
+
+
+class TwoFALoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField()
+    otp = serializers.IntegerField()
+
+
+class UpdatePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField()
+    new_password = serializers.CharField()
+    re_password = serializers.CharField()
