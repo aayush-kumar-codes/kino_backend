@@ -4,12 +4,12 @@ from .serializers import (
     UserSerializer, PasswordSerializer,
     AccessRequestSerializer, RoleSerializer, ActivitySerializer,
     UpdateConfigSerializer, TwoFALoginSerializer, UpdatePasswordSerializer,
-    ParentSerializer
+    ParentSerializer, TeacherSerializer
 )
 from rest_framework import permissions, status
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, CustomPermission, ActivityLog, OTP, Parent
+from .models import User, CustomPermission, ActivityLog, OTP, Parent, Teacher
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
@@ -450,6 +450,8 @@ class GetParentListAPI(viewsets.ModelViewSet):
             queryset = queryset.filter(pk=pk)
         if params.get("country"):
             queryset = queryset.filter(country=params.get("country"))
+        if params.get("name"):
+            queryset = queryset.filter(user__first_name=params.get("name"))
 
         serializer = ParentSerializer(
             queryset, many=True
@@ -463,4 +465,37 @@ class GetParentListAPI(viewsets.ModelViewSet):
         ).data
         response = Response(paginated_response)
         response.success_message = "Parent Data."
+        return response
+
+
+class GetTeacherListAPI(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    queryset = Teacher.objects.all()
+    serializer_class = TeacherSerializer
+    filter_backends = (filters.SearchFilter)
+    search_fields = ['id', 'name']
+
+    def list(self, request, pk=None):
+        queryset = self.queryset
+        params = self.request.query_params
+
+        if pk:
+            queryset = queryset.filter(pk=pk)
+        if params.get("name"):
+            queryset = queryset.filter(user__first_name=params.get("name"))
+        if params.get("class"):
+            queryset = queryset.filter(main_class__name=params.get("class"))
+
+        serializer = TeacherSerializer(
+            queryset, many=True
+        )
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Teacher Data."
         return response

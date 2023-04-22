@@ -3,7 +3,7 @@ from .views import (
     RegisterAPI, LoginAPI, RequestAccessAPI, PasswordChangeAPI,
     LogoutAPI, UserRolesAPI, PermissionView, ActivityAPI, UpdateConfig,
     UpdatePasswordAPIView, DashboardAPI, ActivityAction, VerifyOTP,
-    GetParentListAPI
+    GetParentListAPI, GetTeacherListAPI
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView
@@ -44,5 +44,7 @@ urlpatterns = [
     path('parent_search/', GetParentListAPI.as_view({'get': 'list'}), name='parent_search'),
     path('parent_search/<int:pk>/', GetParentListAPI.as_view({'get': 'list'}), name='parent_search_by_id'),
 
+    path('teacher_search/', GetTeacherListAPI.as_view({'get': 'list'}), name='teacher_search'),
+    path('teacher_search/<int:pk>/', GetTeacherListAPI.as_view({'get': 'list'}), name='teacher_search_by_id'),
 
 ]
