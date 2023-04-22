@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, ActivityLog, Parent
+from .models import User, ActivityLog, Parent, Teacher
 
 
 # UserSerializer: Serializer for User model
@@ -72,7 +72,7 @@ class UserDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            "id", "username", "email", "password", "first_name",
+            "id", "username", "email", "first_name",
             "last_name", "gender", "dob", "mobile_no", "profile_img",
         )
 
@@ -89,3 +89,21 @@ class ParentSerializer(serializers.ModelSerializer):
         user = User.objects.create(**user_data, role=User.Parent)
         parent = Parent.objects.create(user=user, **validated_data)
         return parent
+
+
+class TeacherSerializer(serializers.ModelSerializer):
+    user = UserDataSerializer()
+    main_class = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Teacher
+        fields = ("__all__")
+
+    def get_main_class(self, instance):
+        return instance.main_class.name
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user = User.objects.create(**user_data, role=User.Teacher)
+        teacher = Teacher.objects.create(user=user, **validated_data)
+        return teacher

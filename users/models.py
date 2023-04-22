@@ -124,3 +124,24 @@ class Parent(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
+
+
+class Teacher(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="teacher",
+        primary_key=True
+    )
+    teacher_id = models.CharField(max_length=124)
+    joining_date = models.DateField()
+    year_of_experience = models.IntegerField()
+    qualification = models.CharField(max_length=255)
+    main_class = models.ForeignKey(
+        "school.Class", on_delete=models.CASCADE, related_name="class_teacher"
+    )
+    address = models.CharField(max_length=255)
+    city = models.CharField(max_length=124)
+    region = models.CharField(max_length=124)
+    country = models.CharField(max_length=124)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name}"
