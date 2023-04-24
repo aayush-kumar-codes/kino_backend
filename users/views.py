@@ -2,12 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
     UserSerializer, PasswordSerializer,
-    AccessRequestSerializer, RoleSerializer
+    AccessRequestSerializer, RoleSerializer, ActivitySerializer,
+    UpdateConfigSerializer, TwoFALoginSerializer, UpdatePasswordSerializer
 )
 from rest_framework import permissions, status
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, CustomPermission
+from .models import User, CustomPermission, ActivityLog, OTP
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
@@ -16,11 +17,15 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from .custom_token import account_activation_token
 from django.utils.encoding import force_bytes, force_str
 from utils.hardcoded import FORGOT_PASSWORD_URL
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import logout
-from utils.custom_permissions import AdminAccess, PermissonChoices, TeacherAccess
-from django.db.models import Q
+from utils.custom_permissions import AdminAccess
 from utils.paginations import MyPaginationClass
+from school.models import School
+from django.utils import timezone
+from django.contrib.auth import authenticate
+from .utils import OTPgenerate
+
 # Create your views here.
 
 
@@ -65,35 +70,39 @@ class LoginAPI(APIView):
 
     # Define the post method to handle HTTP POST requests
     def post(self, request, format=None):
+        # Deserialize the request data using the AuthTokenSerializer
+        serializer = AuthTokenSerializer(data=request.data)
+        # Validate the deserialized data and raise an exception if validation fails
+        serializer.is_valid(raise_exception=True)
         user = get_object_or_404(User, email=request.data["username"])
         user.remember_me = int(request.data.get("remember_me", 1))
         user.save()
         if user.is_active:
-            # Deserialize the request data using the AuthTokenSerializer
-            serializer = AuthTokenSerializer(data=request.data)
-            # Validate the deserialized data and raise an exception if validation fails
-            serializer.is_valid(raise_exception=True)
-            # Get the user object from the validated data
-            user = serializer.validated_data['user']
-            # Generate a refresh token for the user
-            refresh = RefreshToken.for_user(user)
-            if user.remember_me:
-                request.session.set_expiry(settings.SESSION_COOKIE_AGE)
-                request.session.modified = True
-            # Prepare the response data, including user details and tokens
-            data = {
-                'id': user.id,
-                'role': user.role,
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
-            # Return the response with the data and a 200 status code
-            response = Response(data, status=200)
-            response.success_message = "Login successfully."
-            return response
+            if user.is_two_factor:
+                return OTPgenerate(request.data["username"], user)
+            else:
+                # Get the user object from the validated data
+                user = serializer.validated_data['user']
+                # Generate a refresh token for the user
+                refresh = RefreshToken.for_user(user)
+                if user.remember_me:
+                    request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+                    request.session.modified = True
+                # Prepare the response data, including user details and tokens
+                data = {
+                    'id': user.id,
+                    'role': user.role,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                    'is_two_factor': user.is_two_factor,
+                }
+                # Return the response with the data and a 200 status code
+                response = Response(data, status=200)
+                response.success_message = "Login successfully."
+                return response
         else:
             response = Response(status=200)
             response.error_message = "Your account is Disabled."
@@ -260,6 +269,17 @@ class UserRolesAPI(APIView):
         response.success_message = "data fetch Successfully."
         return response
 
+    def patch(self, request, pk=None):
+        user_instance = get_object_or_404(User, pk=pk)
+        serializer = RoleSerializer(
+            user_instance, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response = Response(serializer.data, status=200)
+        response.success_message = "User Updated."
+        return response
+
     def delete(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         user.is_active = False
@@ -279,4 +299,137 @@ class PermissionView(APIView):
         ).distinct()
         response = Response(list(permissions), status=200)
         response.success_message = "Permissions"
+        return response
+
+
+class ActivityAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        queryset = ActivityLog.objects.all()
+        activity = queryset.filter(user=request.user.id)
+        print(activity, "activity")
+        serializer = ActivitySerializer(activity, many=True)
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Activities."
+        return response
+
+
+class UpdatePasswordAPIView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        user = request.user
+        serializer = UpdatePasswordSerializer(data=request.data)
+
+        current_password = serializer.validated_data.get('current_password')
+        new_password = serializer.validated_data.get('new_password')
+        re_password = serializer.validated_data.get("re_password")
+
+        if user.check_password(current_password):
+            if new_password == re_password:
+                user.password = make_password(new_password)
+                user.save()
+                return Response('Password updated successfully.')
+            return Response("Password is mismatched.", status=400)
+        return Response('Current password is incorrect.', status=400)
+
+
+class UpdateConfig(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def patch(self, request, pk=None):
+        user = get_object_or_404(User, pk=request.user.id)
+        serializer = UpdateConfigSerializer(
+            user, data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response = Response(serializer.data, status=200)
+        response.success_message = "Updated."
+        return response
+
+
+class ActivityAction(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        data = {
+            "is_activity_log": request.user.is_activity_log,
+            "is_two_factor": request.user.is_two_factor
+        }
+        response = Response(data, status=200)
+        response.success_message = "configs"
+        return response
+
+
+class DashboardAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        queryset = School.objects.all()
+        users = User.objects.filter(role=User.Parent)
+        students = sum(queryset.values_list('total_students', flat=True))
+        teachers = sum(queryset.values_list('total_teachers', flat=True))
+
+        response = Response({
+            "schools": queryset.count(),
+            "teachers": teachers,
+            "parents": users.count(),
+            "students": students,
+        }, status=200)
+        response.success_message = "School Data."
+        return response
+
+
+class VerifyOTP(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = TwoFALoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer._validated_data["username"]
+        password = serializer._validated_data["password"]
+        otp = serializer._validated_data["otp"]
+        user_instance = authenticate(username=username, password=password)
+        if user_instance:
+            otp_instance = OTP.objects.filter(email=username).last()
+            if otp_instance.expire_time < timezone.now():
+                response = Response(status=400)
+                response.error_message = "OTP expire"
+                return response
+            elif otp_instance.otp != int(otp):
+                response = Response(status=400)
+                response.error_message = "Invalid otp"
+                return response
+            else:
+                otp_instance.save()
+
+                refresh = RefreshToken.for_user(user_instance)
+                if user_instance.remember_me:
+                    request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+                    request.session.modified = True
+                data = {
+                    'id': user_instance.id,
+                    'role': user_instance.role,
+                    'email': user_instance.email,
+                    'first_name': user_instance.first_name,
+                    'last_name': user_instance.last_name,
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
+                response = Response(data, status=200)
+                response.success_message = "Login successfully."
+                return response
+        response = Response(status=400)
+        response.error_message = "Invalid username or password."
         return response

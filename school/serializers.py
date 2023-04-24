@@ -16,7 +16,7 @@ class SchoolSerializer(serializers.ModelSerializer):
         try:
             return instance.school_subscription.last().plan.name
         except Exception:
-            return "KAINO SOCIAL"
+            return "KAINO_SOCIAL"
 
     def get_logo_img(self, instance):
         request = self.context.get("request")

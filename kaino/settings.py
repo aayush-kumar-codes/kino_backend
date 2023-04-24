@@ -210,3 +210,7 @@ KINO_PLANS = ["KAINO_SOCIAL", "KAINO_PLUS", "KAINO_BASIC"]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_AGE = 86400  # One day in seconds
+
+ACCOUNT_SID = os.getenv("ACCOUNT_SID")
+AUTH_TOKEN = os.getenv("AUTH_TOKEN")
+MESSAGING_SERVICE_SID = os.getenv("MESSAGING_SERVICE_SID")
