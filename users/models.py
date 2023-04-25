@@ -116,7 +116,7 @@ class Parent(models.Model):
     )
     occupation = models.CharField(max_length=124)
     assigned_students = models.IntegerField()
-    nin = models.CharField(max_length=255)
+    nin = models.CharField(unique=True, max_length=255)
     address = models.CharField(max_length=255)
     city = models.CharField(max_length=124)
     region = models.CharField(max_length=124)
@@ -131,13 +131,36 @@ class Teacher(models.Model):
         User, on_delete=models.CASCADE, related_name="teacher",
         primary_key=True
     )
-    teacher_id = models.CharField(max_length=124)
+    teacher_id = models.CharField(unique=True, max_length=124)
     joining_date = models.DateField()
     year_of_experience = models.IntegerField()
     qualification = models.CharField(max_length=255)
     main_class = models.ForeignKey(
         "school.Class", on_delete=models.CASCADE, related_name="class_teacher"
     )
+    address = models.CharField(max_length=255)
+    city = models.CharField(max_length=124)
+    region = models.CharField(max_length=124)
+    country = models.CharField(max_length=124)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name}"
+
+
+class Student(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="student",
+        primary_key=True
+    )
+    parent = models.ForeignKey(
+        Parent, on_delete=models.CASCADE, related_name="student_parent",
+        null=True, blank=True
+    )
+    id_no = models.CharField(unique=True, max_length=124)
+    _class = models.ForeignKey(
+        "school.Class", on_delete=models.CASCADE, related_name="class_student"
+    )
+    # school_type = models.CharField(max_length=50)
     address = models.CharField(max_length=255)
     city = models.CharField(max_length=124)
     region = models.CharField(max_length=124)
