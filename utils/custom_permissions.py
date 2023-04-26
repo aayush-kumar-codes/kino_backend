@@ -63,7 +63,9 @@ class ContentCreatorAccess(BasePermission):
             return True
         required_permissions, permissions = get_view_permissions(request, view)
 
-        if request.user and request.user.role in [User.Content_creator, User.Head_of_curicullum]:
+        if request.user and request.user.role in [
+            User.Content_creator, User.Head_of_curicullum
+        ]:
             if required_permissions in list(permissions):
                 return True
         return False
