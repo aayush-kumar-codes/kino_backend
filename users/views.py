@@ -28,8 +28,13 @@ from school.models import School
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from .utils import OTPgenerate
+<<<<<<< HEAD
 from rest_framework import filters, viewsets
 
+=======
+# from ipware import get_client_ip
+import requests
+>>>>>>> 00d7a67 (activity_log)
 # Create your views here.
 
 
@@ -74,6 +79,7 @@ class LoginAPI(APIView):
 
     # Define the post method to handle HTTP POST requests
     def post(self, request, format=None):
+        print("JFVYFHY", request)
         # Deserialize the request data using the AuthTokenSerializer
         serializer = AuthTokenSerializer(data=request.data)
         # Validate the deserialized data and raise an exception if validation fails
@@ -105,6 +111,13 @@ class LoginAPI(APIView):
                 }
                 # Return the response with the data and a 200 status code
                 response = Response(data, status=200)
+
+                ActivityLog.create_activity_log(user=user,
+                                 user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                                 ip_address=get_ip() ,
+                                 action='User logged in')
+            
+                
                 response.success_message = "Login successfully."
                 return response
         else:
