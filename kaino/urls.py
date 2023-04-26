@@ -25,6 +25,7 @@ urlpatterns = [
         path('auth/', include('users.urls')),
         path("", include('school.urls')),
         path("subscription/", include('subscription.urls')),
+        path("notification/", include("notification.urls")),
 
     ]))
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
