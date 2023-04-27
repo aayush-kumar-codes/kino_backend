@@ -7,7 +7,7 @@ import random
 from datetime import timedelta, datetime
 from django.utils import timezone
 from user_agents import parse
-
+from utils.helper import get_ip
 
 class CustomPermission(models.Model):
     code_name = models.CharField(max_length=100)
@@ -89,7 +89,7 @@ class ActivityLog(models.Model):
         User, on_delete=models.CASCADE, related_name="user_activity"
     )
     browser = models.CharField(max_length=124)
-    ip_address = models.CharField(max_length=200)
+    ip_address = models.CharField(max_length=200, default='')
     date = models.DateTimeField(auto_now_add=True)
     action = models.CharField(max_length=255)
     is_activity = models.BooleanField(default=False)
@@ -97,21 +97,21 @@ class ActivityLog(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.action}"
     
-
     @staticmethod
-    def create_activity_log(user, user_agent, ip_address, action):
+    def create_activity_log(user, user_agent, action):
         if user is not None:
             browser_name = parse(user_agent).browser.family
             activity_log = ActivityLog(
                 user=user,
                 browser=browser_name,
-                ip_address=ip_address,
+                ip_address=get_ip(),
                 action=action,
                 is_activity=True,
                 date=timezone.now()
             )
             activity_log.save()
-  
+
+
 class OTP(models.Model):
     email = models.EmailField(
         ('email_address'), unique=True, max_length=200, null=True, blank=True

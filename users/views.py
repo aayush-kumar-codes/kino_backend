@@ -19,7 +19,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from .custom_token import account_activation_token
 from django.utils.encoding import force_bytes, force_str
-from utils.hardcoded import FORGOT_PASSWORD_URL
+from utils.hardcoded import FORGOT_PASSWORD_URL, LOGIN_ALART
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import logout
 from utils.custom_permissions import AdminAccess
@@ -72,7 +72,7 @@ class LoginAPI(APIView):
 
     # Define the post method to handle HTTP POST requests
     def post(self, request, format=None):
-        print("JFVYFHY", request)
+
         # Deserialize the request data using the AuthTokenSerializer
         serializer = AuthTokenSerializer(data=request.data)
         # Validate the deserialized data and raise an exception if validation fails
@@ -106,10 +106,9 @@ class LoginAPI(APIView):
                 response = Response(data, status=200)
 
                 ActivityLog.create_activity_log(user=user,
-                                 user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                                 ip_address=get_ip() ,
-                                 action='User logged in')
-            
+                        user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                        action=LOGIN_ALART
+                    )
                 
                 response.success_message = "Login successfully."
                 return response

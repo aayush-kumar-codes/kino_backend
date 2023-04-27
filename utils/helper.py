@@ -1,6 +1,7 @@
 import uuid
 import os
-
+import requests
+from django.conf import settings
 
 def get_file_path(instance, filename):
     ext = filename.split('.')[-1]
@@ -18,3 +19,12 @@ def get_view_permissions(request, view):
         "code_id", flat=True
     )
     return required_permissions, permissions
+
+
+def get_ip():
+    try:
+        response = requests.get(settings.IPIFY_API_URL)
+        return response.json()['ip']
+    except Exception:
+        return ""
+    
