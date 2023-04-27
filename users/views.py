@@ -28,14 +28,7 @@ from school.models import School
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from .utils import OTPgenerate
-<<<<<<< HEAD
 from rest_framework import filters, viewsets
-
-=======
-# from ipware import get_client_ip
-import requests
->>>>>>> 00d7a67 (activity_log)
-# Create your views here.
 
 
 class RegisterAPI(APIView):
