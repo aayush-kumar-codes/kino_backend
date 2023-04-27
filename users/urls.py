@@ -2,7 +2,9 @@ from django.urls import path
 from .views import (
     RegisterAPI, LoginAPI, RequestAccessAPI, PasswordChangeAPI,
     LogoutAPI, UserRolesAPI, PermissionView, ActivityAPI, UpdateConfig,
-    UpdatePasswordAPIView, DashboardAPI, ActivityAction, VerifyOTP
+    UpdatePasswordAPIView, DashboardAPI, ActivityAction, VerifyOTP,
+    GetParentListAPI, GetTeacherListAPI, GetStudentListAPI,
+    ClassBasedStudentCount, ClassBasedParentCount
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView
@@ -39,5 +41,18 @@ urlpatterns = [
     path('dashboard/', DashboardAPI.as_view(), name='dashboard'),
     path('active_status/', ActivityAction.as_view(), name='active_status'),
     path('verify_otp/', VerifyOTP.as_view(), name='verify_otp'),
+
+    path('parent_search/', GetParentListAPI.as_view({'get': 'list'}), name='parent_search'),
+    path('parent_search/<int:pk>/', GetParentListAPI.as_view({'get': 'list'}), name='parent_search_by_id'),
+
+    path('class_parent_count/', ClassBasedParentCount.as_view(), name='class_parent_count'),
+
+    path('teacher_search/', GetTeacherListAPI.as_view({'get': 'list'}), name='teacher_search'),
+    path('teacher_search/<int:pk>/', GetTeacherListAPI.as_view({'get': 'list'}), name='teacher_search_by_id'),
+
+    path('student_search/', GetStudentListAPI.as_view({'get': 'list'}), name='student_search'),
+    path('student_search/<int:pk>/', GetStudentListAPI.as_view({'get': 'list'}), name='student_search_by_id'),
+
+    path('class_std_count/', ClassBasedStudentCount.as_view(), name='class_std_count'),
 
 ]
