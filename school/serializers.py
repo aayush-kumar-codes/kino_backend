@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import School, Term, Lesson, Class
+from .models import School, Term, Lesson, Class, Organization
 from utils.helper import generate_absolute_uri
 from django.conf import settings
 
@@ -7,6 +7,10 @@ from django.conf import settings
 class SchoolSerializer(serializers.ModelSerializer):
     subscriptions = serializers.SerializerMethodField()
     logo_img = serializers.SerializerMethodField()
+    organization = serializers.CharField(
+        source="organization.name", default=None,
+        read_only=True
+    )
 
     class Meta:
         model = School
@@ -16,7 +20,7 @@ class SchoolSerializer(serializers.ModelSerializer):
         try:
             return instance.school_subscription.last().plan.name
         except Exception:
-            return "KAINO_SOCIAL"
+            return settings.KINO_PLANS[0]
 
     def get_logo_img(self, instance):
         request = self.context.get("request")
@@ -31,20 +35,6 @@ class CreateSchoolSerializer(serializers.ModelSerializer):
     class Meta:
         model = School
         exclude = ("users", "cover",)
-
-
-class SchoolDataSerializer(serializers.ModelSerializer):
-    subscriptions = serializers.SerializerMethodField()
-
-    class Meta:
-        model = School
-        exclude = ("users", "cover")
-
-    def get_subscriptions(self, instance):
-        try:
-            return instance.school_subscription.last().plan.name
-        except Exception:
-            return settings.KINO_PLANS[0]
 
 
 class TermSerializer(serializers.ModelSerializer):
@@ -66,3 +56,21 @@ class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = ("__all__")
+
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    school = serializers.CharField(
+        source="organization.all.count", read_only=True,
+        default=None
+    )
+    logo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Organization
+        fields = ("id", "name", "email", "logo", "country", "school")
+
+    def get_logo(self, instance):
+        request = self.context.get("request")
+        if instance.logo:
+            return generate_absolute_uri(request, instance.logo.url)
+        return ""

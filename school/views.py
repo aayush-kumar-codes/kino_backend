@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
     SchoolSerializer, CreateSchoolSerializer, TermSerializer,
-    ClassSerializer, LessonSerializer
+    ClassSerializer, LessonSerializer, OrganizationSerializer
 )
 from utils.custom_permissions import (
     HeadOfCuricullumAccess, PermissonChoices,
@@ -10,10 +10,11 @@ from utils.custom_permissions import (
 )
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import School, Class, Term, Lesson
+from .models import School, Class, Term, Lesson, Organization
 from utils.paginations import MyPaginationClass
 from rest_framework import filters, viewsets
 from datetime import datetime
+
 # Create your views here.
 
 
@@ -92,10 +93,15 @@ class GetSchoolListAPI(viewsets.ModelViewSet):
                 school_subscription__plan__name=params.get("subscription")
             )
         if params.get("phone"):
-            queryset = queryset.filter(phone='+' + params.get("phone"))
+            queryset = queryset.filter(phone__icontains='+' + params.get("phone"))
         if params.get("country"):
-            queryset = queryset.filter(country=params.get("country"))
-
+            queryset = queryset.filter(country__icontains=params.get("country"))
+        if params.get("id"):
+            queryset = queryset.filter(id__icontains=params.get("id"))
+        if params.get("name"):
+            queryset = queryset.filter(name__icontains=params.get("name"))
+        if params.get("organization"):
+            queryset = queryset.filter(organization__name__icontains=params.get("organization"))
         serializer = SchoolSerializer(
             queryset, many=True, context={"request": request}
         )
@@ -306,7 +312,7 @@ class GetLessonListAPI(viewsets.ModelViewSet):
             queryset = queryset.filter(pk=pk)
         if params.get("name"):
             queryset = queryset.filter(
-                name=params.get("name")
+                name__icontains=params.get("name")
             )
         if params.get("class"):
             queryset = queryset.filter(
@@ -325,4 +331,35 @@ class GetLessonListAPI(viewsets.ModelViewSet):
         ).data
         response = Response(paginated_response)
         response.success_message = "Lesson Data."
+        return response
+
+
+class GetOrganizationsListAPI(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+    filter_backends = (filters.SearchFilter)
+    search_fields = ['id', 'country']
+
+    def list(self, request):
+        queryset = self.queryset
+        params = self.request.query_params
+        if params.get("pk"):
+            queryset = queryset.filter(pk__icontains=params.get("pk"))
+        if params.get("country"):
+            queryset = queryset.filter(
+                country__icontains=params.get("country")
+            )
+        serializer = OrganizationSerializer(
+            queryset, many=True, context={"request": request}
+        )
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Organizations Data."
         return response

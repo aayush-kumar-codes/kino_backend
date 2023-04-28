@@ -24,12 +24,12 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import logout
 from utils.custom_permissions import AdminAccess
 from utils.paginations import MyPaginationClass
-from school.models import School
+from school.models import School, Organization
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from .utils import OTPgenerate
 from rest_framework import filters, viewsets
-
+from django.db.models import Sum
 # Create your views here.
 
 
@@ -380,16 +380,25 @@ class DashboardAPI(APIView):
     def get(self, request):
         queryset = School.objects.all()
         users = User.objects.filter(role=User.Parent)
+        organizations = Organization.objects.all()
         students = sum(queryset.values_list('total_students', flat=True))
         teachers = sum(queryset.values_list('total_teachers', flat=True))
+
+        top_orgs = organizations.annotate(
+            total_students=Sum('organization__total_students')*100 / students
+        ).values('name', 'total_students').order_by("-total_students")[:4]
 
         response = Response({
             "schools": queryset.count(),
             "teachers": teachers,
             "parents": users.count(),
             "students": students,
+            "organizations": {
+                "total": organizations.count(),
+                "data": list(top_orgs)
+            }
         }, status=200)
-        response.success_message = "School Data."
+        response.success_message = "Admin Dashboard Data."
         return response
 
 
