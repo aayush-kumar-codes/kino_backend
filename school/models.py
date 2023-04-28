@@ -6,6 +6,16 @@ from phonenumber_field.modelfields import PhoneNumberField
 # Create your models here.
 
 
+class Organization(models.Model):
+    name = models.CharField(max_length=124)
+    email = models.EmailField(unique=True)
+    logo = models.ImageField(upload_to=get_file_path, null=True, blank=True)
+    country = models.CharField(max_length=124)
+
+    def __str__(self):
+        return self.name
+
+
 class Term(models.Model):
     term_start_date = models.DateField()
     mid_term_break = models.DateField()
@@ -28,6 +38,10 @@ class Term(models.Model):
 
 class School(models.Model):
     users = models.ManyToManyField(User)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.SET_NULL, related_name="organization",
+        null=True, blank=True
+    )
     name = models.CharField(max_length=255, unique=True)
     year_established = models.DateField()
     motto = models.CharField(max_length=255)
