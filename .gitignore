@@ -92,3 +92,10 @@ db.sqlite3
 venv/
 
 .vscode/
+
+**/migrations/**
+!**/migrations
+!**/migrations/__init__.py
+media/
+env/
+nohup.out
