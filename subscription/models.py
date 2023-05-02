@@ -1,6 +1,7 @@
 from django.db import models
 from school.models import School, Organization
 from utils.helper import get_file_path
+import uuid
 
 # Create your models here.
 
