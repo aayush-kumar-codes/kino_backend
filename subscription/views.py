@@ -1,9 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import PlanSerializer, BenefitSerializer, GetPlanSerializer
+from .serializers import (
+    PlanSerializer, BenefitSerializer, GetPlanSerializer,
+    InvoiceSerializer, SubscriptionSerializer
+)
 from rest_framework.permissions import IsAuthenticated
 from utils.custom_permissions import AdminAccess
-from .models import Plan, Benefit
+from .models import Plan, Benefit, Subscription
+from django.utils.timezone import now, timedelta
+from utils.paginations import MyPaginationClass
+
 # Create your views here.
 
 
@@ -62,3 +68,46 @@ class GetPlan(APIView):
             'BENEFITS': benefits.data
         }
         return Response(response_data)
+
+
+class FinanceAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        queryset = Subscription.objects.all()
+        school = queryset.values_list("school")
+        paid = queryset.filter(is_paid=Subscription.Paid).order_by("-created_at")
+        unpaid = queryset.filter(is_paid=Subscription.Unpaid)
+        school_added_last_month = queryset.filter(
+            created_at__gte=now() - timedelta(days=30)
+        )
+        paid_last_month = queryset.filter(
+            created_at__gte=now() - timedelta(days=30), is_paid=Subscription.Paid
+        ).count()
+        unpaid_last_month = queryset.filter(
+            created_at__gte=now() - timedelta(days=30), is_paid=Subscription.Unpaid
+        ).count()
+        serializer = SubscriptionSerializer(paid, many=True)
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+
+        ).data
+        paginated_response.update({
+            "school_count": school.count(),
+            "school_statistics": school_added_last_month.count(),
+            "paid_count": paid.count(),
+            "paid_statistics": (paid_last_month * 100)/queryset.count(),
+            "unpaid_count": unpaid.count(),
+            "uppaid_statistics": (unpaid_last_month * 100)/queryset.count(),
+            "history_count": 5,
+            "history_statistics": 0.6,
+        })
+        response = Response(
+            paginated_response,
+        )
+        response.success_message = "Finance data."
+        return response
