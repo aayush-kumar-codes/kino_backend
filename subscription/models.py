@@ -14,6 +14,10 @@ class Benefit(models.Model):
 
 
 class Plan(models.Model):
+    KAINO_PLUS = "KAINO_PLUS"
+    KAINO_BASIC = "KAINO_BASIC"
+    KAINO_SOCIAL = "KAINO_SOCIAL"
+
     name = models.CharField(max_length=124)
     price = models.IntegerField()
     benefits = models.ManyToManyField(Benefit)
@@ -61,9 +65,7 @@ class Invoice(models.Model):
         School, on_delete=models.CASCADE, related_name="school_invoice"
     )
     subscription = models.CharField(max_length=200)
-    invoice_number = models.CharField(max_length=20,
-        default='IN{}'.format(str(uuid.uuid4().int & (10**12-1)).zfill(12)),
-        editable=False)
+    invoice_number = models.CharField(max_length=20)
     invoice_from = models.CharField(max_length=500)
     invoice_to = models.CharField(max_length=500)
     po_number = models.IntegerField()
@@ -84,7 +86,9 @@ class Item(models.Model):
     category_name = models.CharField(max_length=500)
     quantity = models.IntegerField()
     price = models.DecimalField(max_digits=8, decimal_places=2)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
     discount = models.IntegerField()
 
     def save(self, *args, **kwargs):

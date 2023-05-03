@@ -2,13 +2,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
     PlanSerializer, BenefitSerializer, GetPlanSerializer,
-    InvoiceSerializer, SubscriptionSerializer
+    SubscriptionSerializer
 )
 from rest_framework.permissions import IsAuthenticated
 from utils.custom_permissions import AdminAccess
 from .models import Plan, Benefit, Subscription
 from django.utils.timezone import now, timedelta
 from utils.paginations import MyPaginationClass
+from .utils import GraphData
 
 # Create your views here.
 
@@ -76,7 +77,9 @@ class FinanceAPI(APIView):
     def get(self, request):
         queryset = Subscription.objects.all()
         school = queryset.values_list("school")
-        paid = queryset.filter(is_paid=Subscription.Paid).order_by("-created_at")
+        paid = queryset.filter(
+            is_paid=Subscription.Paid
+        ).order_by("-created_at")
         unpaid = queryset.filter(is_paid=Subscription.Unpaid)
         school_added_last_month = queryset.filter(
             created_at__gte=now() - timedelta(days=30)
@@ -111,3 +114,37 @@ class FinanceAPI(APIView):
         )
         response.success_message = "Finance data."
         return response
+
+
+class GraphDataAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        params = self.request.query_params
+        queryset = Subscription.objects.all()
+        lists, key = GraphData(params)
+        data = []
+        for value in lists:
+            subscription_count = queryset.filter(key[value])
+            if subscription_count:
+                data.append(
+                    [
+                        value,
+                        subscription_count.filter(
+                            plan__name=Plan.KAINO_PLUS
+                        ).count(),
+                        subscription_count.filter(
+                            plan__name=Plan.KAINO_BASIC
+                        ).count(),
+                        subscription_count.filter(
+                            plan__name=Plan.KAINO_SOCIAL
+                        ).count()
+                    ]
+                )
+            else:
+                data.append(
+                    [
+                        value, 0, 0, 0
+                    ]
+                )
+        return Response(data)
