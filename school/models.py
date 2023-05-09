@@ -10,7 +10,15 @@ class Organization(models.Model):
     name = models.CharField(max_length=124)
     email = models.EmailField(unique=True)
     logo = models.ImageField(upload_to=get_file_path, null=True, blank=True)
+    address = models.CharField(
+        max_length=225, null=True, blank=True, default=None
+    )
+    city = models.CharField(
+        max_length=124, null=True, blank=True, default=None
+    )
     country = models.CharField(max_length=124)
+
+    file_dir = "organozation/logo"
 
     def __str__(self):
         return self.name
@@ -63,6 +71,8 @@ class School(models.Model):
     logo_img = models.ImageField(
         upload_to=get_file_path, null=True, blank=True
     )
+
+    file_dir = "school/logo"
 
     def __str__(self):
         return self.name

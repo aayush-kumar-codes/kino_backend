@@ -19,7 +19,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from .custom_token import account_activation_token
 from django.utils.encoding import force_bytes, force_str
-from utils.hardcoded import FORGOT_PASSWORD_URL
+from utils.hardcoded import FORGOT_PASSWORD_URL, LOGIN_ALART
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import logout
 from utils.custom_permissions import AdminAccess
@@ -30,6 +30,8 @@ from django.contrib.auth import authenticate
 from .utils import OTPgenerate
 from rest_framework import filters, viewsets
 from django.db.models import Sum
+from subscription.models import Item, Invoice, Subscription
+
 # Create your views here.
 
 
@@ -105,6 +107,7 @@ class LoginAPI(APIView):
                 }
                 # Return the response with the data and a 200 status code
                 response = Response(data, status=200)
+                ActivityLog.create_activity_log(request, LOGIN_ALART)
                 response.success_message = "Login successfully."
                 return response
         else:
@@ -388,6 +391,11 @@ class DashboardAPI(APIView):
             total_students=Sum('organization__total_students')*100 / students
         ).values('name', 'total_students').order_by("-total_students")[:4]
 
+        items = Item.objects.all()
+        paid = items.filter(invoice__status=Invoice.Paid).aggregate(Sum('amount'))['amount__sum'],
+        due = items.filter(invoice__status=Invoice.Due).aggregate(Sum('amount'))['amount__sum'],
+        school = queryset.filter(school_subscription__is_paid=Subscription.Paid).count()
+
         response = Response({
             "schools": queryset.count(),
             "teachers": teachers,
@@ -396,6 +404,11 @@ class DashboardAPI(APIView):
             "organizations": {
                 "total": organizations.count(),
                 "data": list(top_orgs)
+            },
+            "paid_data": {
+                "schools_paid": school,
+                "amount_paid": paid,
+                "amount_due": due
             }
         }, status=200)
         response.success_message = "Admin Dashboard Data."

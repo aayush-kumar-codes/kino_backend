@@ -1,6 +1,6 @@
 from django.db import models
-from school.models import School
-import uuid
+from school.models import School, Organization
+from utils.helper import get_file_path
 
 # Create your models here.
 
@@ -61,39 +61,68 @@ class Subscription(models.Model):
 
 
 class Invoice(models.Model):
-    school = models.ForeignKey(
-        School, on_delete=models.CASCADE, related_name="school_invoice"
+    Paid = 1
+    Unpaid = 2
+    Due = 3
+    Overdue = 4
+    Cancelled = 5
+    Recurring = 6
+    Draft = 7
+
+    STATUS_CHOICE = (
+        (Paid, 'Paid'),
+        (Unpaid, 'Unpaid'),
+        (Due, 'Due'),
+        (Overdue, 'OverDue'),
+        (Cancelled, 'Cancelled'),
+        (Recurring, 'Recurring'),
+        (Draft, 'Draft'),
     )
-    subscription = models.CharField(max_length=200)
-    invoice_number = models.CharField(max_length=20)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE,
+        related_name='organization_invoice'
+    )
+    invoice_number = models.CharField(
+        max_length=20, unique=True
+    )
+    status = models.PositiveSmallIntegerField(
+        choices=STATUS_CHOICE, default=Unpaid
+    )
     invoice_from = models.CharField(max_length=500)
     invoice_to = models.CharField(max_length=500)
-    po_number = models.IntegerField()
-    start_date = models.DateField(auto_now_add=True)
-    end_date = models.DateField()
+    po_number = models.CharField(max_length=15)
+    created_date = models.DateField(auto_now_add=True)
+    due_date = models.DateField(null=True, blank=True)
+    sign_img = models.ImageField(
+        upload_to=get_file_path, null=True, blank=True
+    )
+    name_of_signee = models.CharField(max_length=124, null=True, blank=True)
+
+    file_dir = "invoice/signature"
 
     def __str__(self):
-        return self.school.name
+        return self.organization.name
+
 
 
 class Item(models.Model):
     invoice = models.ForeignKey(
         Invoice, on_delete=models.CASCADE, related_name='invoice_amount'
     )
-    items = models.OneToOneField(
-        Plan, on_delete=models.CASCADE, related_name="plan"
+    items = models.CharField(max_length=500)
+    plan = models.ForeignKey(
+        Plan, on_delete=models.CASCADE, related_name='item_plan'
     )
-    category_name = models.CharField(max_length=500)
     quantity = models.IntegerField()
-    price = models.DecimalField(max_digits=8, decimal_places=2)
+    price = models.IntegerField()
+    discount = models.IntegerField()
     amount = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True
     )
-    discount = models.IntegerField()
 
     def save(self, *args, **kwargs):
         self.amount = self.price * self.quantity
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.category_name
+        return self.invoice.invoice_number

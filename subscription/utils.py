@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, date, time
 from django.db.models import Q
-import calendar
+import calendar, uuid
 
 
-def GraphData(params):
+def graph_data(params):
     key = {}
     if params.get("weekly"):
         start_date = datetime.today() - timedelta(days=7)
@@ -36,3 +36,8 @@ def GraphData(params):
         )
     lists = list(key.keys())
     return lists, key
+
+
+def generate_invoice_number():
+    invoice_number = 'IN{}'.format(str(uuid.uuid4().int)[:12])
+    return invoice_number
