@@ -86,7 +86,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
 
     def get_amount(self, invoice_instance):
         items = invoice_instance.invoice_amount.all()
-        amount = sum(item.amount for item in items)
+        amount = sum(item.amount if item.amount is not None else 0 for item in items)
         return amount
 
     def get_logo(self, instance):
@@ -116,7 +116,7 @@ class ItemsSerializer(serializers.ModelSerializer):
     item_name = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Item
-        fields = ("plan", "quantity", "price", "discount", "amount", "item_name")
+        fields = ("id", "plan", "quantity", "price", "discount", "amount", "item_name")
     
     def get_item_name(self, instance):
         return instance.items
@@ -133,7 +133,7 @@ class ItemSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Invoice
-        fields = ("invoice_number", "invoice_from", "invoice_to",
+        fields = ("organization", "invoice_number", "invoice_from", "invoice_to",
             "po_number", "created_date", "due_date", "status", "sign_img",
             "name_of_signee", "organization_name", "items", "total_amount")
 

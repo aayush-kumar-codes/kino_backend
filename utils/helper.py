@@ -22,15 +22,6 @@ def get_view_permissions(request, view):
     return required_permissions, permissions
 
 
-def get_calculated_amount(instance, quantity, discount):
-
-    try:
-        amount = (instance.price * quantity) * discount / 100
-    except:
-        amount = instance.price * quantity
-    return amount
-
-
 def get_ip():
     try:
         response = requests.get(settings.IPIFY_API_URL)

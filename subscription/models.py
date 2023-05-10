@@ -121,7 +121,11 @@ class Item(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        self.amount = self.price * self.quantity
+        try:
+            discount_amount = (self.price * self.quantity) * self.discount / 100
+            self.amount = (self.price * self.quantity) - discount_amount
+        except:
+            self.amount = self.plan.price
         super().save(*args, **kwargs)
 
     def __str__(self):

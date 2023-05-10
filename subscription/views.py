@@ -13,7 +13,6 @@ from .models import (
 from django.utils.timezone import now, timedelta
 from utils.paginations import MyPaginationClass
 from .utils import graph_data, generate_invoice_number
-from utils.helper import get_calculated_amount
 from django.shortcuts import get_object_or_404
 from django.core.files.base import ContentFile
 from django.db.models import Sum
@@ -182,29 +181,30 @@ class InvoiceAPI(APIView):
                 "invoice_to": f"{organization.name}'s {organization.address}",
                 "name_of_signee": invoice.get("name_of_signee"),
                 "due_date": invoice.get("due_date", str(now().date() + timedelta(days=7))),
-                "status": Invoice.Draft if invoice.get("is_draft") else Invoice.Unpaid 
+                "status": Invoice.Draft if invoice.get("is_draft") else Invoice.Unpaid,
             }
         )
         if created:
-            invoice_instance.sign_img.save(
-                str(request.data.get("sign_img")),
-                ContentFile(request.data.get("sign_img").read())
-            )
-
+            sign_img = data.get("sign_img", None)
+            if sign_img:
+                invoice_instance.sign_img.save(
+                    str(sign_img),
+                    ContentFile(sign_img.read())
+                )
+            item_list = []
             for item in items:
                 item["invoice"] = invoice_instance
                 plan = get_object_or_404(Plan, name=item.get("plan"))
                 item["items"] = item.get("item_name", "Subscription")
                 item["plan"] = plan
                 item["price"] = plan.price
-                item["amount"] = get_calculated_amount(
-                    plan, item.get("quantity", 1),
-                    item.get("discount")
-                )
                 item.pop("item_name")
-                Item.objects.create(
-                    **item
+                item_list.append(
+                    Item(**item)
                 )
+            Item.objects.bulk_create(
+                item_list
+            )
             response = Response()
             response.success_message = "Invoice Created"
             return response
@@ -221,6 +221,49 @@ class InvoiceAPI(APIView):
         serializer = ItemSerializers(queryset, many=True, context={"request": request})
         response = Response(serializer.data)
         response.success_message = "Invoice data."
+        return response
+
+    def patch(self, request, pk=None):
+        invoice_obj = get_object_or_404(Invoice ,pk=pk)
+        serializer = ItemSerializer(
+            invoice_obj, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        items = serializer.validated_data["item"]
+        invoice = serializer.validated_data["invoice"]
+        organization = get_object_or_404(
+            Organization, pk=invoice['organization']
+            )
+        invoice_instance, created = Invoice.objects.update_or_create(
+            invoice_number=invoice.get("invoice_number"),
+            defaults={
+                "organization": organization,
+                "po_number": invoice.get("po_number"),
+                "invoice_from": invoice.get("invoice_from"),
+                "invoice_to": f"{organization.name}'s {organization.address}",
+                "name_of_signee": invoice.get("name_of_signee"),
+                "due_date": invoice.get("due_date", str(now().date() + timedelta(days=7))),
+                "status": Invoice.Draft if invoice.get("is_draft") else Invoice.Unpaid,
+            }  
+        )
+
+        item_list = []
+        invoice_instance.invoice_amount.all().delete()
+        for item in items:
+            item["invoice"] = invoice_instance
+            plan = get_object_or_404(Plan, name=item.get("plan"))
+            item["items"] = item.get("item_name", "Subscription")
+            item["plan"] = plan
+            item["price"] = plan.price
+            item.pop("item_name")
+            item_list.append(
+                Item(**item)
+            )
+        Item.objects.bulk_create(
+            item_list
+        )
+        response = Response()
+        response.success_message = "Invoice Updated."
         return response
 
     def delete(self, request, pk=None):
@@ -289,7 +332,7 @@ class InvoicePreData(APIView):
         )
         serializer = UserSerializer(request.user)
         data = {
-            "invoice_no": uuid,
+            "invoice_number": uuid,
             "invoice_from": serializer.data,
             "invoice_to": list(invoice_to)
         }
