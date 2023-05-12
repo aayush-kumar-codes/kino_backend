@@ -152,5 +152,5 @@ class ItemSerializers(serializers.ModelSerializer):
         return status
 
     def get_total_amount(self, instance):
-        total = sum([item.amount for item in instance.invoice_amount.all()])
+        total = sum(item.amount if item.amount is not None else 0 for item in instance.invoice_amount.all())
         return total

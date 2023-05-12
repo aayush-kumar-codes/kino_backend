@@ -199,6 +199,8 @@ class InvoiceAPI(APIView):
                 item["plan"] = plan
                 item["price"] = plan.price
                 item.pop("item_name")
+                discount_amount = (plan.price * item.get("quantity")) * item.get("discount") / 100
+                item["amount"] = (plan.price * item.get("quantity")) - discount_amount
                 item_list.append(
                     Item(**item)
                 )

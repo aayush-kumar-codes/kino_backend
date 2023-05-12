@@ -193,3 +193,12 @@ class Student(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
+
+
+class FLNImpact(models.Model):
+    accessment_area = models.CharField(max_length=100)
+    numbers = models.IntegerField()
+    created_at = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return self.accessment_area

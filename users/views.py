@@ -4,13 +4,13 @@ from .serializers import (
     UserSerializer, PasswordSerializer,
     AccessRequestSerializer, RoleSerializer, ActivitySerializer,
     UpdateConfigSerializer, TwoFALoginSerializer, UpdatePasswordSerializer,
-    ParentSerializer, TeacherSerializer, StudentSerializer
+    ParentSerializer, TeacherSerializer, StudentSerializer, FlnSerializer
 )
 from rest_framework import permissions, status
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import (
-    User, CustomPermission, ActivityLog, OTP, Parent, Teacher, Student
+    User, CustomPermission, ActivityLog, OTP, Parent, Teacher, Student, FLNImpact
 )
 from django.core.mail import send_mail
 from django.conf import settings
@@ -381,6 +381,7 @@ class DashboardAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
+        impact = FLNImpact.objects.all()
         queryset = School.objects.all()
         users = User.objects.filter(role=User.Parent)
         organizations = Organization.objects.all()
@@ -395,6 +396,7 @@ class DashboardAPI(APIView):
         paid = items.filter(invoice__status=Invoice.Paid).aggregate(Sum('amount'))['amount__sum'],
         due = items.filter(invoice__status=Invoice.Due).aggregate(Sum('amount'))['amount__sum'],
         school = queryset.filter(school_subscription__is_paid=Subscription.Paid).count()
+        serializer = FlnSerializer(impact, many=True)
 
         response = Response({
             "schools": queryset.count(),
@@ -409,7 +411,9 @@ class DashboardAPI(APIView):
                 "schools_paid": school,
                 "amount_paid": paid,
                 "amount_due": due
-            }
+            },
+            "fln_over_all": impact.aggregate(Sum("numbers"))["numbers__sum"],
+            "fln_impact": serializer.data
         }, status=200)
         response.success_message = "Admin Dashboard Data."
         return response
