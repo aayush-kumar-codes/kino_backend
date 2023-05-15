@@ -26,6 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG = False
 DEBUG = int(os.getenv('ENVIRNOMENT', 0))
 
 ALLOWED_HOSTS = ['*']
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'users',
     'school',
     'subscription',
+    'notification',
 
 ]
 
@@ -163,7 +165,7 @@ MEDIA_ROOT = MEDIA_DIR
 MEDIA_URL = '/media/'
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
@@ -214,3 +216,5 @@ SESSION_COOKIE_AGE = 86400  # One day in seconds
 ACCOUNT_SID = os.getenv("ACCOUNT_SID")
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 MESSAGING_SERVICE_SID = os.getenv("MESSAGING_SERVICE_SID")
+
+IPIFY_API_URL = "https://api.ipify.org/?format=json"

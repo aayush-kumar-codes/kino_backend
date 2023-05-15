@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, ActivityLog, Parent, Teacher, Student
+from .models import User, ActivityLog, Parent, Teacher, Student, FLNImpact
 
 
 # UserSerializer: Serializer for User model
@@ -129,3 +129,9 @@ class StudentSerializer(serializers.ModelSerializer):
         user = User.objects.create(**user_data, role=User.Student)
         student = Student.objects.create(user=user, **validated_data)
         return student
+
+
+class FlnSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FLNImpact
+        fields = ("accessment_area", "numbers")

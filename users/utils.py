@@ -25,12 +25,14 @@ def OTPgenerate(username, obj):
             email=username
         )
         instance.save()
-
         subject = "Account Verification"
         message = "Your OTP is: {}".format(instance.otp)
         from_email = settings.EMAIL_HOST_USER
-        recipient_list = [username, ]
-        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        recipient_list = [username,]
+        try:
+            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        except Exception as e:
+            print("Email Exception", str(e))
         data = {
             "is_two_factor": 1
         }
