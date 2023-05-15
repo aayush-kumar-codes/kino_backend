@@ -1,11 +1,13 @@
 import uuid
-import os
+import os, requests
+from django.conf import settings
 
 
 def get_file_path(instance, filename):
+    file_dir = instance.file_dir
     ext = filename.split('.')[-1]
     filename = "%s.%s" % (uuid.uuid4(), ext)
-    return os.path.join('uploads/logos', filename)
+    return os.path.join(file_dir, filename)
 
 
 def generate_absolute_uri(request, url):
@@ -18,3 +20,11 @@ def get_view_permissions(request, view):
         "code_id", flat=True
     )
     return required_permissions, permissions
+
+
+def get_ip():
+    try:
+        response = requests.get(settings.IPIFY_API_URL)
+        return response.json()['ip']
+    except Exception as e:
+        return ""

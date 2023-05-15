@@ -1,10 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .managers import UserManager
-from utils.helper import get_file_path
+from utils.helper import get_file_path, get_ip
 from phonenumber_field.modelfields import PhoneNumberField
 import random
 from datetime import timedelta, datetime
+from user_agents import parse
+from django.utils import timezone
 
 
 class CustomPermission(models.Model):
@@ -20,8 +22,8 @@ class User(AbstractUser):
     # Role constants
     Admin = 1
     Teacher = 2
-    Student = 3
-    Parent = 4
+    Parent = 3
+    Student = 4
     Head_of_curicullum = 5
     Content_creator = 6
     Finance = 7
@@ -70,6 +72,8 @@ class User(AbstractUser):
     is_activity_log = models.BooleanField(default=False)
     is_two_factor = models.BooleanField(default=False)
 
+    file_dir = "user/profile"
+
     # Required fields for Django's AbstractUser
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ('username',)
@@ -91,6 +95,27 @@ class ActivityLog(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     action = models.CharField(max_length=255)
     is_activity = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.action}"
+    
+    @staticmethod
+    def create_activity_log(request, message):
+        try:
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            if request.user:
+                browser_name = parse(user_agent).browser.family
+                activity_log = ActivityLog(
+                    user=request.user,
+                    browser=browser_name,
+                    ip_address=get_ip(),
+                    action=message,
+                    is_activity=True,
+                    date=timezone.now()
+                )
+                activity_log.save()
+        except Exception as e:
+            print("Exception", str(e))
 
 
 class OTP(models.Model):
@@ -168,3 +193,12 @@ class Student(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
+
+
+class FLNImpact(models.Model):
+    accessment_area = models.CharField(max_length=100)
+    numbers = models.IntegerField()
+    created_at = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return self.accessment_area

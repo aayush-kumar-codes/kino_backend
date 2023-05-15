@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     SchoolAPI, GetSchoolListAPI,
     TermAPI, AllTermsAPI, ClassAPI, LessonAPI,
-    GetLessonListAPI
+    GetLessonListAPI, GetOrganizationsListAPI
 )
 
 urlpatterns = [
@@ -25,5 +25,6 @@ urlpatterns = [
     path('lesson/<int:pk>/', LessonAPI.as_view(), name='lesson_by_id'),
     path('get_lessons/', GetLessonListAPI.as_view({'get': 'list'}), name='get_lessons'),
     path('get_lessons/<int:pk>/', GetLessonListAPI.as_view({'get': 'list'}), name='get_lessons'),
+    path('organization/', GetOrganizationsListAPI.as_view({'get': 'list'}), name='organization'),
 
 ]
