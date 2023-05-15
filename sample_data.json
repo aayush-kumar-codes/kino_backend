@@ -1,0 +1,110 @@
+{
+    "benefit" : [
+        {
+            "name" : "Access to all course content",
+            "description" : "Access to all course content"
+        },
+        {
+            "name" : "Access to limited course content",
+            "description" : "Access to limited course content"
+        },
+        {
+            "name" : "No certificate of completion", 
+            "description" : "No certificate of completion"
+        },
+        {
+            "name" : "Basic technical support", 
+            "description" : "Basic technical support"
+        },
+        {
+            "name" : "Interactive learning experience", 
+            "description" : "Interactive learning experience"
+        },
+        {
+            "name" : "Presonalized feedback and evalution", 
+            "description" : "Presonalized feedback and evalution"
+        },
+        {
+            "name" : "Priority technical support", 
+            "description" : "Priority technical support"
+        }
+    ],
+
+    "plan" : [
+        {
+            "name" : "KAINO_SOCIAL", 
+            "price" : 0,
+            "benefits" : [1, 2, 3, 4]
+        },
+        {
+            "name" : "KAINO_BASIC", 
+            "price" : 200,
+            "benefits" : [1, 2, 3, 4, 5]
+        },
+        {
+            "name" : "KAINO_PLUS", 
+            "price" : 400,
+            "benefits" : [1, 2, 3, 4, 5, 6, 7]
+        }
+    ],
+
+    "permission" :[
+        {
+            "code_name" : "LESSON_READ", 
+            "code_id" : 1
+        },
+        {
+            "code_name" : "LESSON_EDIT", 
+            "code_id" : 2
+        },
+        {
+            "code_name" : "LESSON_DELETE", 
+            "code_id" : 3 
+        },
+        {
+            "code_name" : "SCHOOL_READ", 
+            "code_id" : 4 
+        },
+        {
+            "code_name" : "SCHOOL_EDIT", 
+            "code_id" : 5
+        },
+        {
+            "code_name" : "SCHOOL_DELETE", 
+            "code_id" : 6
+        },
+        {
+            "code_name" : "SETTING_ADD", 
+            "code_id" : 7
+        },
+        {
+            "code_name" : "SETTING_EDIT", 
+            "code_id" : 8
+        },
+        {
+            "code_name" : "SETTING_DELETE", 
+            "code_id" : 9
+        },
+        {
+            "code_name" : "TERM_READ", 
+            "code_id" : 10
+        },
+        {
+            "code_name" : "TERM_EDIT", 
+            "code_id" : 11
+        },
+        {
+            "code_name" : "TERM_DELETE", 
+            "code_id" : 12
+        },
+        {
+            "code_name" : "FULL", 
+            "code_id" : 13
+        },
+        {
+            "code_name" : "TEAM_LEAD", 
+            "code_id" : 14
+        }
+    ]
+
+}

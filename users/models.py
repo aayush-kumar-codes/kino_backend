@@ -22,8 +22,8 @@ class User(AbstractUser):
     # Role constants
     Admin = 1
     Teacher = 2
-    Student = 3
-    Parent = 4
+    Parent = 3
+    Student = 4
     Head_of_curicullum = 5
     Content_creator = 6
     Finance = 7
