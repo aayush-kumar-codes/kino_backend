@@ -2,18 +2,23 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
     SchoolSerializer, CreateSchoolSerializer, TermSerializer,
-    ClassSerializer, LessonSerializer, OrganizationSerializer
+    ClassSerializer, LessonSerializer, OrganizationSerializer,
+    SchoolDashboardSerializer
 )
+from users.serializers import FlnSerializer
 from utils.custom_permissions import (
     HeadOfCuricullumAccess, PermissonChoices,
-    ContentCreatorAccess,
+    ContentCreatorAccess, SchoolAdminAccess
 )
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import School, Class, Term, Lesson, Organization
+from .models import School, Class, Term, Lesson, Organization, User
+from users.models import FLNImpact
+from subscription.models import Subscription
 from utils.paginations import MyPaginationClass
 from rest_framework import filters, viewsets
 from datetime import datetime
+from django.db.models import Sum
 
 # Create your views here.
 
@@ -362,4 +367,43 @@ class GetOrganizationsListAPI(viewsets.ModelViewSet):
         ).data
         response = Response(paginated_response)
         response.success_message = "Organizations Data."
+        return response
+
+
+class SchoolDashboardAPI(APIView):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+
+    def get(self, request):
+        impact = FLNImpact.objects.all()
+        queryset = School.objects.get(pk=request.user.id)
+        lessons = Lesson.objects.all()
+        is_covered = lessons.filter(is_covered=True)
+        serializer = FlnSerializer(impact, many=True)
+        schoolserializer = SchoolDashboardSerializer(queryset)
+        data = {
+            "classes": "",
+            "coverage": {
+                "covered":is_covered.count(),
+                "Total": lessons.count()
+            },
+            **schoolserializer.data,
+            "fln_over_all": impact.aggregate(Sum("numbers"))["numbers__sum"],
+            "fln_impact": serializer.data
+        }
+        response = Response(data)
+        response.success_message = "School Dashboard Data."
+        return response
+
+
+class LessonCoverageAPI(APIView):
+    def get(self, request):
+        lessons = Lesson.objects.all()
+        classes = lessons.values_list("_class__name").distinct()
+        dict = {}
+        for i in list(classes):
+            is_covered = lessons.filter(_class__name=i[0], is_covered=True).count()
+            _class = lessons.filter(_class__name=i[0]).count()
+            dict[i[0]] = {"covered": is_covered, "total": _class}
+        response = Response(dict)
+        response.success_message = "Coverage Data."
         return response

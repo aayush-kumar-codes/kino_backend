@@ -4,7 +4,8 @@ from .serializers import (
     UserSerializer, PasswordSerializer,
     AccessRequestSerializer, RoleSerializer, ActivitySerializer,
     UpdateConfigSerializer, TwoFALoginSerializer, UpdatePasswordSerializer,
-    ParentSerializer, TeacherSerializer, StudentSerializer, FlnSerializer
+    ParentSerializer, TeacherSerializer, StudentSerializer, FlnSerializer,
+    GetAllParentSerializer, CreateMemberSerializer
 )
 from rest_framework import permissions, status
 from rest_framework.authtoken.serializers import AuthTokenSerializer
@@ -22,15 +23,16 @@ from django.utils.encoding import force_bytes, force_str
 from utils.hardcoded import FORGOT_PASSWORD_URL, LOGIN_ALART
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import logout
-from utils.custom_permissions import AdminAccess
+from utils.custom_permissions import AdminAccess, SchoolAdminAccess
 from utils.paginations import MyPaginationClass
-from school.models import School, Organization
+from school.models import School, Organization, Class
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from .utils import OTPgenerate
 from rest_framework import filters, viewsets
 from django.db.models import Sum
 from subscription.models import Item, Invoice, Subscription
+from django.core.files.base import ContentFile
 
 # Create your views here.
 
@@ -90,7 +92,9 @@ class LoginAPI(APIView):
                 # Get the user object from the validated data
                 user = serializer.validated_data['user']
                 # Generate a refresh token for the user
-                refresh = RefreshToken.for_user(user)
+                token = RefreshToken.for_user(user)
+                access_token = token.access_token
+                access_token["role"] = user.role
                 if user.remember_me:
                     request.session.set_expiry(settings.SESSION_COOKIE_AGE)
                     request.session.modified = True
@@ -101,13 +105,14 @@ class LoginAPI(APIView):
                     'email': user.email,
                     'first_name': user.first_name,
                     'last_name': user.last_name,
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
+                    'refresh': str(token),
+                    'access': str(access_token),
                     'is_two_factor': user.is_two_factor,
                 }
                 # Return the response with the data and a 200 status code
                 response = Response(data, status=200)
-                ActivityLog.create_activity_log(request, LOGIN_ALART)
+                if user.is_activity_log:
+                    ActivityLog.create_activity_log(request, user, LOGIN_ALART)
                 response.success_message = "Login successfully."
                 return response
         else:
@@ -259,7 +264,7 @@ class UserRolesAPI(APIView):
         if params.get("finance"):
             queryset = finance_roles
 
-        serializer = RoleSerializer(queryset, many=True)
+        serializer = RoleSerializer(queryset.exclude(id=request.user.id), many=True)
         pagination = MyPaginationClass()
         paginated_data = pagination.paginate_queryset(
             serializer.data, request
@@ -457,12 +462,70 @@ class VerifyOTP(APIView):
                     'access': str(refresh.access_token),
                 }
                 response = Response(data, status=200)
+                if user_instance.is_activity_log:
+                    message = "You login through two-factor auth."
+                    ActivityLog.create_activity_log(request, user_instance, message)
                 response.success_message = "Login successfully."
                 return response
         response = Response(status=400)
         response.error_message = "Invalid username or password."
         return response
 
+
+class ParentAPI(APIView):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+
+    def post(self, request):
+        data = request.data
+        serializer = CreateMemberSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        parent = serializer.validated_data["member"]
+        try:
+            user_instance, created = User.objects.get_or_create(
+                email=user.get("email"),
+                defaults={
+                    "username": user.get("username"),
+                    "first_name": user.get("first_name"),
+                    "last_name": user.get("last_name"),
+                    "gender": user.get("gender"),
+                    "dob": user.get("dob"),
+                    "role": User.Parent,
+                    "mobile_no": user.get("mobile_no"),
+                }
+            )
+
+            if created:
+                password = user.get("password")
+                profile_img = data.get("profile_img", None)
+                if password:
+                    user_instance.set_password(password)
+
+                if profile_img:
+                    user_instance.profile_img.save(
+                        str(profile_img),
+                        ContentFile(profile_img.read())
+                    )
+
+            Parent.objects.create(
+                user=user_instance,
+                occupation=parent.get("occupation"),
+                nin=parent.get("nin"),
+                address=parent.get("address"),
+                city=parent.get("city"),
+                region=parent.get("region"),
+                country=parent.get("country"),
+            )
+            school = School.objects.get(pk=request.user.id)
+            school.users.add(user_instance)
+        except Exception as e:
+            response = Response(str(e), status=400)
+            response.error_message = str(e)
+            return response
+
+        response = Response(status=200)
+        response.success_message = "Parent Created."
+        return response
 
 class GetParentListAPI(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
@@ -515,6 +578,66 @@ class ClassBasedParentCount(APIView):
         return response
 
 
+class TeacherAPI(APIView):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+
+    def post(self, request):
+        data = request.data
+        serializer = CreateMemberSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        teacher = serializer.validated_data["member"]
+        try:
+            user_instance, created = User.objects.get_or_create(
+                email=user.get("email"),
+                defaults={
+                    "username": user.get("username"),
+                    "first_name": user.get("first_name"),
+                    "last_name": user.get("last_name"),
+                    "gender": user.get("gender"),
+                    "dob": user.get("dob"),
+                    "role": User.Teacher,
+                    "mobile_no": user.get("mobile_no"),
+                }
+            )
+
+            if created:
+                password = user.get("password")
+                profile_img = data.get("profile_img", None)
+                if password:
+                    user_instance.set_password(password)
+
+                if profile_img:
+                    user_instance.profile_img.save(
+                        str(profile_img),
+                        ContentFile(profile_img.read())
+                    )
+
+            main_class = Class.objects.get(pk=teacher.get("main_class_id"))
+            Teacher.objects.create(
+                user=user_instance,
+                teacher_id=teacher.get("teacher_id"),
+                joining_date=teacher.get("joining_date"),
+                year_of_experience=teacher.get("year_of_experience"),
+                qualification=teacher.get("qualification"),
+                main_class = main_class,
+                teacher_role = teacher.get("role"),
+                address = teacher.get("address"),
+                city=teacher.get("city"),
+                region=teacher.get("region"),
+                country=teacher.get("country"),
+            )
+            school = School.objects.get(pk=request.user.id)
+            school.users.add(user_instance)
+        except Exception as e:
+            response = Response(status=400)
+            response.error_message = str(e)
+            return response
+        response = Response(status=200)
+        response.success_message = "Teacher Created."
+        return response
+
+
 class GetTeacherListAPI(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
     queryset = Teacher.objects.all()
@@ -547,6 +670,74 @@ class GetTeacherListAPI(viewsets.ModelViewSet):
         ).data
         response = Response(paginated_response)
         response.success_message = "Teacher Data."
+        return response
+
+
+class GetAllParentsAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        queryset = Parent.objects.all()
+        serializer = GetAllParentSerializer(queryset, many=True)
+        response = Response(serializer.data)
+        response.success_message = "All Parents."
+        return response
+
+
+class StudentAPI(APIView):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+
+    def post(self, request):
+        data = request.data
+        serializer = CreateMemberSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        student = serializer.validated_data["member"]
+        try:
+            if student.get("parents_id") is not None:
+                parent = Parent.objects.get(pk=student.get("parents_id"))
+            else:
+                parent = None
+            user_instance, created = User.objects.get_or_create(
+                email=user.get("email"),
+                defaults={
+                    "username": user.get("email"),
+                    "first_name": user.get("first_name"),
+                    "last_name": user.get("last_name"),
+                    "gender": user.get("gender"),
+                    "dob": user.get("dob"),
+                    "mobile_no": user.get("mobile_no"),
+                    "role": User.Student,
+                    "is_active": False,
+                }
+            )
+            if created:
+                profile_img = data.get("profile_img", None)
+                if profile_img:
+                    user_instance.profile_img.save(
+                        str(profile_img),
+                        ContentFile(profile_img.read())
+                    )
+            parent_id = student.get("parents_id")
+            parent = Parent.objects.get(pk=parent_id) if parent_id is not None else None
+            class_id = Class.objects.get(id=student.get("class_id"))
+
+            Student.objects.create(
+                user=user_instance,
+                parent=parent,
+                religion=student.get("religion"),
+                id_no=student.get("id_no"),
+                _class=class_id,
+                address=student.get("address"),
+            )
+            school = School.objects.get(pk=request.user.id)
+            school.users.add(user_instance)
+        except Exception as e:
+            response = Response(status=400)
+            response.error_message = str(e)
+            return response
+        response = Response(status=200)
+        response.success_message = "Student Created."
         return response
 
 

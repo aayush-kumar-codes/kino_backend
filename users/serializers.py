@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import User, ActivityLog, Parent, Teacher, Student, FLNImpact
-
+from school.models import School
 
 # UserSerializer: Serializer for User model
 class UserSerializer(serializers.ModelSerializer):
@@ -77,18 +77,17 @@ class UserDataSerializer(serializers.ModelSerializer):
         )
 
 
+class CreateMemberSerializer(serializers.Serializer):
+    user = serializers.JSONField(required=True)
+    member = serializers.JSONField(required=True)
+
+
 class ParentSerializer(serializers.ModelSerializer):
     user = UserDataSerializer()
 
     class Meta:
         model = Parent
         fields = ("__all__")
-
-    def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create(**user_data, role=User.Parent)
-        parent = Parent.objects.create(user=user, **validated_data)
-        return parent
 
 
 class TeacherSerializer(serializers.ModelSerializer):
@@ -102,11 +101,15 @@ class TeacherSerializer(serializers.ModelSerializer):
     def get_main_class(self, instance):
         return instance.main_class.name
 
-    def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create(**user_data, role=User.Teacher)
-        teacher = Teacher.objects.create(user=user, **validated_data)
-        return teacher
+
+class GetAllParentSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source="user.id")
+    first_name = serializers.CharField(source="user.first_name")
+    last_name = serializers.CharField(source="user.last_name")
+    mobile_no = serializers.CharField(source="user.mobile_no")
+    class Meta:
+        model = Parent
+        fields = ("id", "first_name", "last_name", "mobile_no")
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -119,16 +122,12 @@ class StudentSerializer(serializers.ModelSerializer):
         fields = ("__all__")
 
     def get_parent(self, instance):
-        return f"{instance.parent.user.first_name} {instance.parent.user.last_name}"
+        if instance.parent:
+            return f"{instance.parent.user.first_name} {instance.parent.user.last_name}"
+        return None
 
     def get__class(self, instance):
         return instance._class.name
-
-    def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create(**user_data, role=User.Student)
-        student = Student.objects.create(user=user, **validated_data)
-        return student
 
 
 class FlnSerializer(serializers.ModelSerializer):

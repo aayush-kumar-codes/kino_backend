@@ -2,6 +2,7 @@ from django.db import models
 from utils.helper import get_file_path
 from users.models import User
 from phonenumber_field.modelfields import PhoneNumberField
+from django.contrib.auth import get_user_model
 
 # Create your models here.
 
@@ -45,7 +46,7 @@ class Term(models.Model):
 
 
 class School(models.Model):
-    users = models.ManyToManyField(User)
+    users = models.ManyToManyField(User, related_name="school_users")
     organization = models.ForeignKey(
         Organization, on_delete=models.SET_NULL, related_name="organization",
         null=True, blank=True
@@ -77,6 +78,25 @@ class School(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        User = get_user_model()
+        user = User.objects.create_user(email=self.email, password='default_password', role=User.School_Admin)
+        user.first_name = "School"
+        user.last_name = "Admin"
+        user.save()
+        super().save(*args, **kwargs)
+        self.users.add(user)
+    # def save(self, *args, **kwargs):
+    #     created = not self.pk
+    #     super().save(*args, **kwargs) 
+    #     if created:
+    #         username = self.email
+    #         email = self.email
+    #         password = User.objects.make_random_password()
+    #         print(password, "password")
+    #         user = User.objects.create_user(username=username, password=password, email=email, role=User.School_Admin)
+    #         self.users.add(user)
+
 
 class Class(models.Model):
     name = models.CharField(max_length=50)
@@ -100,6 +120,7 @@ class Lesson(models.Model):
     )
     week = models.IntegerField()
     country = models.CharField(max_length=124)
+    is_covered = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name

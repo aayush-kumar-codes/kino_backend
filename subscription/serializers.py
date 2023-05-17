@@ -85,8 +85,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
         return ""
 
     def get_amount(self, invoice_instance):
-        items = invoice_instance.invoice_amount.all()
-        amount = sum(item.amount if item.amount is not None else 0 for item in items)
+        amount = invoice_instance.invoice_amount.aggregate(Sum('amount'))['amount__sum']
         return amount
 
     def get_logo(self, instance):
@@ -152,5 +151,5 @@ class ItemSerializers(serializers.ModelSerializer):
         return status
 
     def get_total_amount(self, instance):
-        total = sum(item.amount if item.amount is not None else 0 for item in instance.invoice_amount.all())
+        total = instance.invoice_amount.aggregate(Sum('amount'))['amount__sum']
         return total

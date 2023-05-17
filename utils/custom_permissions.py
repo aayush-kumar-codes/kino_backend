@@ -82,6 +82,13 @@ class FinanceAccess(BasePermission):
         return False
 
 
+class SchoolAdminAccess(BasePermission):
+    def has_permission(self, request, view):
+        if request.user and request.user.role == User.School_Admin:
+            return True
+        return False
+
+
 class PermissonChoices(Enum):
     NULL = 0
     LESSON_READ = 1

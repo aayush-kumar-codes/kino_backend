@@ -83,6 +83,10 @@ class FinanceAPI(APIView):
     def get(self, request):
         queryset = Subscription.objects.all()
         school = queryset.values_list("school")
+        items = Item.objects.all()
+        history = items.aggregate(Sum('amount'))['amount__sum']
+        history_static = items.filter(invoice__created_date__gte=now() - timedelta(days=30)).count()
+
         paid = queryset.filter(
             is_paid=Subscription.Paid
         ).order_by("-created_at")
@@ -112,8 +116,8 @@ class FinanceAPI(APIView):
             "paid_statistics": round((paid_last_month * 100)/queryset.count()),
             "unpaid_count": unpaid.count(),
             "uppaid_statistics": round((unpaid_last_month * 100)/queryset.count()),
-            "history_count": 5,
-            "history_statistics": 0.6,
+            "history_count": history,
+            "history_statistics": round((history_static * 100 / items.count())),
         })
         response = Response(
             paginated_response,

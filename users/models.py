@@ -27,6 +27,7 @@ class User(AbstractUser):
     Head_of_curicullum = 5
     Content_creator = 6
     Finance = 7
+    School_Admin = 8
 
     # Role choices tuple for the role field
     ROLE_CHOICES = (
@@ -37,6 +38,7 @@ class User(AbstractUser):
         (Head_of_curicullum, 'Head_of_curicullum'),
         (Content_creator, 'Content_creator'),
         (Finance, 'Finance'),
+        (School_Admin, 'School_Admin')
     )
 
     # Gender constants
@@ -100,13 +102,13 @@ class ActivityLog(models.Model):
         return f"{self.user.username} - {self.action}"
     
     @staticmethod
-    def create_activity_log(request, message):
+    def create_activity_log(request, user, message):
         try:
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
             if request.user:
-                browser_name = parse(user_agent).browser.family
+                browser_name = parse(str(user_agent)).browser.family
                 activity_log = ActivityLog(
-                    user=request.user,
+                    user=user,
                     browser=browser_name,
                     ip_address=get_ip(),
                     action=message,
@@ -140,7 +142,6 @@ class Parent(models.Model):
         User, on_delete=models.CASCADE, related_name="parent", primary_key=True
     )
     occupation = models.CharField(max_length=124)
-    assigned_students = models.IntegerField()
     nin = models.CharField(unique=True, max_length=255)
     address = models.CharField(max_length=255)
     city = models.CharField(max_length=124)
@@ -163,6 +164,7 @@ class Teacher(models.Model):
     main_class = models.ForeignKey(
         "school.Class", on_delete=models.CASCADE, related_name="class_teacher"
     )
+    teacher_role = models.CharField(max_length=50, null=True, blank=True)
     address = models.CharField(max_length=255)
     city = models.CharField(max_length=124)
     region = models.CharField(max_length=124)
@@ -185,11 +187,8 @@ class Student(models.Model):
     _class = models.ForeignKey(
         "school.Class", on_delete=models.CASCADE, related_name="class_student"
     )
-    # school_type = models.CharField(max_length=50)
+    religion = models.CharField(max_length=50)
     address = models.CharField(max_length=255)
-    city = models.CharField(max_length=124)
-    region = models.CharField(max_length=124)
-    country = models.CharField(max_length=124)
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"

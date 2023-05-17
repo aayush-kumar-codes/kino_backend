@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from .models import School, Term, Lesson, Class, Organization
+from .models import School, Term, Lesson, Class, Organization, User
 from utils.helper import generate_absolute_uri
 from django.conf import settings
+from subscription.models import Subscription
 
 
 class SchoolSerializer(serializers.ModelSerializer):
@@ -74,3 +75,28 @@ class OrganizationSerializer(serializers.ModelSerializer):
         if instance.logo:
             return generate_absolute_uri(request, instance.logo.url)
         return ""
+
+
+class SchoolDashboardSerializer(serializers.ModelSerializer):
+    total_parents = serializers.SerializerMethodField()
+    subscription = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    due_date = serializers.SerializerMethodField()
+
+    class Meta:
+        model = School
+        fields = ("total_students", "total_teachers", "total_parents", "subscription", "status", "due_date")
+
+    def get_total_parents(self, obj):
+        return obj.users.filter(role=User.Parent).count()
+
+    def get_subscription(self, instance):
+        return instance.school_subscription.last().plan.name
+
+    def get_status(self, instance):
+        is_paid = instance.school_subscription.last().is_paid
+        status_choices = dict(Subscription.STATUS_CHOICE)
+        return status_choices.get(is_paid, "")
+
+    def get_due_date(self, instance):
+        return instance.school_subscription.last().end_date
