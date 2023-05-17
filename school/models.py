@@ -80,22 +80,13 @@ class School(models.Model):
 
     def save(self, *args, **kwargs):
         User = get_user_model()
-        user = User.objects.create_user(email=self.email, password='default_password', role=User.School_Admin)
-        user.first_name = "School"
-        user.last_name = "Admin"
-        user.save()
+        password = User.objects.make_random_password()
+        user, created  = User.objects.get_or_create(email=self.email, first_name="School", last_name="Admin", role=User.School_Admin)
+        if created:
+            user.set_password(password)
+            user.save()
         super().save(*args, **kwargs)
         self.users.add(user)
-    # def save(self, *args, **kwargs):
-    #     created = not self.pk
-    #     super().save(*args, **kwargs) 
-    #     if created:
-    #         username = self.email
-    #         email = self.email
-    #         password = User.objects.make_random_password()
-    #         print(password, "password")
-    #         user = User.objects.create_user(username=username, password=password, email=email, role=User.School_Admin)
-    #         self.users.add(user)
 
 
 class Class(models.Model):

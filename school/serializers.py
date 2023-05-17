@@ -91,12 +91,32 @@ class SchoolDashboardSerializer(serializers.ModelSerializer):
         return obj.users.filter(role=User.Parent).count()
 
     def get_subscription(self, instance):
-        return instance.school_subscription.last().plan.name
+        if instance.school_subscription.last():
+            return instance.school_subscription.last().plan.name
+        return ""
 
     def get_status(self, instance):
-        is_paid = instance.school_subscription.last().is_paid
-        status_choices = dict(Subscription.STATUS_CHOICE)
-        return status_choices.get(is_paid, "")
+        if instance.school_subscription.last():
+            is_paid = instance.school_subscription.last().is_paid
+            status_choices = dict(Subscription.STATUS_CHOICE)
+            return status_choices.get(is_paid, "")
+        return ""
 
     def get_due_date(self, instance):
-        return instance.school_subscription.last().end_date
+        if instance.school_subscription.last():
+            return instance.school_subscription.last().end_date
+        return ""
+
+
+class ClassAndTeacher(serializers.ModelSerializer):
+    _class = serializers.CharField(
+        source="teacher.main_class.name",
+        default="", read_only=True
+    )
+    class_teacher = serializers.SerializerMethodField()
+    class Meta:
+        model = User
+        fields = ("_class", "class_teacher")
+
+    def get_class_teacher(self, instance):
+        return f"{instance.first_name} {instance.last_name}"

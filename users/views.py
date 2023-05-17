@@ -33,6 +33,7 @@ from rest_framework import filters, viewsets
 from django.db.models import Sum
 from subscription.models import Item, Invoice, Subscription
 from django.core.files.base import ContentFile
+from school.utils import get_school_obj
 
 # Create your views here.
 
@@ -476,6 +477,7 @@ class ParentAPI(APIView):
     permission_classes = (IsAuthenticated, SchoolAdminAccess,)
 
     def post(self, request):
+        school = get_school_obj(request)
         data = request.data
         serializer = CreateMemberSerializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -516,7 +518,6 @@ class ParentAPI(APIView):
                 region=parent.get("region"),
                 country=parent.get("country"),
             )
-            school = School.objects.get(pk=request.user.id)
             school.users.add(user_instance)
         except Exception as e:
             response = Response(str(e), status=400)
@@ -582,6 +583,7 @@ class TeacherAPI(APIView):
     permission_classes = (IsAuthenticated, SchoolAdminAccess,)
 
     def post(self, request):
+        school = get_school_obj(request)
         data = request.data
         serializer = CreateMemberSerializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -627,7 +629,6 @@ class TeacherAPI(APIView):
                 region=teacher.get("region"),
                 country=teacher.get("country"),
             )
-            school = School.objects.get(pk=request.user.id)
             school.users.add(user_instance)
         except Exception as e:
             response = Response(status=400)
@@ -688,6 +689,7 @@ class StudentAPI(APIView):
     permission_classes = (IsAuthenticated, SchoolAdminAccess,)
 
     def post(self, request):
+        school = get_school_obj(request)
         data = request.data
         serializer = CreateMemberSerializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -730,7 +732,6 @@ class StudentAPI(APIView):
                 _class=class_id,
                 address=student.get("address"),
             )
-            school = School.objects.get(pk=request.user.id)
             school.users.add(user_instance)
         except Exception as e:
             response = Response(status=400)
@@ -783,15 +784,15 @@ class ClassBasedStudentCount(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        queryset = Student.objects.all()
-        K1 = queryset.filter(_class=1).count()
-        K2 = queryset.filter(_class=2).count()
-        K3 = queryset.filter(_class=3).count()
-        data = {
-            "K1": K1,
-            "K2": K2,
-            "K3": K3
-        }
-        response = Response(data, status=200)
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = User.objects.filter(school_users=school, role=User.Student)
+        classes = queryset.values_list("student___class__name").distinct()
+        dict = {}
+        for i in list(classes):
+            students = queryset.filter(student___class__name=i[0]).count()
+        dict[i[0]] = students
+        response = Response(dict, status=200)
         response.success_message = "countend data."
         return response

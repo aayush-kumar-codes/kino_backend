@@ -3,7 +3,8 @@ from .views import (
     SchoolAPI, GetSchoolListAPI,
     TermAPI, AllTermsAPI, ClassAPI, LessonAPI,
     GetLessonListAPI, GetOrganizationsListAPI, SchoolDashboardAPI,
-    LessonCoverageAPI
+    LessonCoverageAPI, ClassesAPI, StudentDataAPI, TeacherDataAPI,
+    ParentDataAPI, SchoolDetailsAPI
 )
 
 urlpatterns = [
@@ -29,5 +30,10 @@ urlpatterns = [
     path('organization/', GetOrganizationsListAPI.as_view({'get': 'list'}), name='organization'),
     path('school/dashboard/', SchoolDashboardAPI.as_view(), name='dashboard'),
     path('coverage/', LessonCoverageAPI.as_view(), name='coverage'),
+    path('classes_data/', ClassesAPI.as_view(), name='classes_data'),
+    path('std_list/', StudentDataAPI.as_view({'get': 'list'}), name='std_list'),
+    path('parent_list/', ParentDataAPI.as_view({'get': 'list'}), name='parent_list'),
+    path('teacher_list/', TeacherDataAPI.as_view({'get': 'list'}), name='teacher_list'),
+    path('school_detail/', SchoolDetailsAPI.as_view(), name='school_detail'),
 
 ]

@@ -92,14 +92,13 @@ class ParentSerializer(serializers.ModelSerializer):
 
 class TeacherSerializer(serializers.ModelSerializer):
     user = UserDataSerializer()
-    main_class = serializers.SerializerMethodField()
+    main_class = serializers.CharField(
+        source="main_class.name", read_only=True
+    )
 
     class Meta:
         model = Teacher
         fields = ("__all__")
-
-    def get_main_class(self, instance):
-        return instance.main_class.name
 
 
 class GetAllParentSerializer(serializers.ModelSerializer):
@@ -115,7 +114,7 @@ class GetAllParentSerializer(serializers.ModelSerializer):
 class StudentSerializer(serializers.ModelSerializer):
     user = UserDataSerializer()
     parent = serializers.SerializerMethodField(read_only=True)
-    _class = serializers.SerializerMethodField(read_only=True)
+    _class = serializers.CharField(source="_class.name", read_only=True)
 
     class Meta:
         model = Student
@@ -125,9 +124,6 @@ class StudentSerializer(serializers.ModelSerializer):
         if instance.parent:
             return f"{instance.parent.user.first_name} {instance.parent.user.last_name}"
         return None
-
-    def get__class(self, instance):
-        return instance._class.name
 
 
 class FlnSerializer(serializers.ModelSerializer):

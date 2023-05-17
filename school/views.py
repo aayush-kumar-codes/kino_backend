@@ -3,9 +3,11 @@ from rest_framework.response import Response
 from .serializers import (
     SchoolSerializer, CreateSchoolSerializer, TermSerializer,
     ClassSerializer, LessonSerializer, OrganizationSerializer,
-    SchoolDashboardSerializer
+    SchoolDashboardSerializer, ClassAndTeacher
 )
-from users.serializers import FlnSerializer
+from users.serializers import (
+    FlnSerializer, StudentSerializer, TeacherSerializer, ParentSerializer
+)
 from utils.custom_permissions import (
     HeadOfCuricullumAccess, PermissonChoices,
     ContentCreatorAccess, SchoolAdminAccess
@@ -13,12 +15,13 @@ from utils.custom_permissions import (
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from .models import School, Class, Term, Lesson, Organization, User
-from users.models import FLNImpact
+from users.models import FLNImpact, Teacher, Student, Parent
 from subscription.models import Subscription
 from utils.paginations import MyPaginationClass
 from rest_framework import filters, viewsets
 from datetime import datetime
 from django.db.models import Sum
+from .utils import get_school_obj
 
 # Create your views here.
 
@@ -375,11 +378,11 @@ class SchoolDashboardAPI(APIView):
 
     def get(self, request):
         impact = FLNImpact.objects.all()
-        queryset = School.objects.get(pk=request.user.id)
+        school = get_school_obj(request)
         lessons = Lesson.objects.all()
         is_covered = lessons.filter(is_covered=True)
         serializer = FlnSerializer(impact, many=True)
-        schoolserializer = SchoolDashboardSerializer(queryset)
+        schoolserializer = SchoolDashboardSerializer(school)
         data = {
             "classes": "",
             "coverage": {
@@ -396,6 +399,8 @@ class SchoolDashboardAPI(APIView):
 
 
 class LessonCoverageAPI(APIView):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+
     def get(self, request):
         lessons = Lesson.objects.all()
         classes = lessons.values_list("_class__name").distinct()
@@ -406,4 +411,141 @@ class LessonCoverageAPI(APIView):
             dict[i[0]] = {"covered": is_covered, "total": _class}
         response = Response(dict)
         response.success_message = "Coverage Data."
+        return response
+
+
+class ClassesAPI(APIView):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+
+    def get(self, request):
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        teachers = User.objects.filter(
+            school_users=school, role=User.Teacher
+        ).order_by('teacher__main_class__name')
+        serializer = ClassAndTeacher(teachers, many=True)
+        response = Response(serializer.data)
+        response.success_message = "Classes."
+        return response
+
+
+class StudentDataAPI(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+    filter_backends = (filters.SearchFilter)
+    search_fields = ['id', 'name']
+
+    def list(self, request):
+        params = self.request.query_params
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = Student.objects.filter(user__school_users=school, user__role=User.Student)
+        
+        if params.get("pk"):
+            queryset = queryset.filter(pk=params.get("pk"))
+        if params.get("name"):
+            queryset = queryset.filter(user__first_name__icontains=params.get("name"))
+        if params.get("phone"):
+            queryset = queryset.filter(user__mobile_no__icontains='+' + params.get("phone"))
+        if params.get("gender"):
+            queryset = queryset.filter(user__gender=params.get("gender"))
+        if params.get("class"):
+            queryset = queryset.filter(_class__name=params.get("class"))
+
+        serializer = StudentSerializer(
+            queryset, many=True, context={"request": request}
+        )
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Student Data."
+        return response
+
+
+class ParentDataAPI(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+    filter_backends = (filters.SearchFilter)
+    search_fields = ['id', 'name']
+
+    def list(self, request):
+        params = self.request.query_params
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = Parent.objects.filter(user__school_users=school, user__role=User.Parent)
+
+        if params.get("pk"):
+            queryset = queryset.filter(pk=params.get("pk"))
+        if params.get("name"):
+            queryset = queryset.filter(user__first_name__icontains=params.get("name"))
+        if params.get("phone"):
+            queryset = queryset.filter(user__mobile_no__icontains='+' + params.get("phone"))
+        if params.get("class"):
+            queryset = queryset.filter(student_parent___class__name=params.get("class"))
+
+        serializer = ParentSerializer(
+            queryset, many=True, context={"request": request}
+        )
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Parent Data."
+        return response
+
+
+class TeacherDataAPI(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+    filter_backends = (filters.SearchFilter)
+    search_fields = ['id', 'name']
+
+    def list(self, request):
+        params = self.request.query_params
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = Teacher.objects.filter(user__school_users=school, user__role=User.Teacher)
+
+        if params.get("pk"):
+            queryset = queryset.filter(pk=params.get("pk"))
+        if params.get("name"):
+            queryset = queryset.filter(first_name__icontains=params.get("name"))
+        if params.get("class"):
+            queryset = queryset.filter(main_class__name=params.get("class"))
+
+        serializer = TeacherSerializer(
+            queryset, many=True, context={"request": request}
+        )
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
+        response.success_message = "Teacher Data."
+        return response
+
+
+class SchoolDetailsAPI(APIView):
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
+
+    def get(self, request):
+        school = get_school_obj(request)
+        if school is None:
+            return Response("School not found.")
+        serializer = SchoolSerializer(school, context={"request": request})
+        response = Response(serializer.data, status=200)
+        response.success_message = "School Data."
         return response
