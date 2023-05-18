@@ -546,7 +546,7 @@ class GetParentListAPI(viewsets.ModelViewSet):
             queryset = queryset.filter(user__first_name=params.get("name"))
 
         serializer = ParentSerializer(
-            queryset, many=True
+            queryset, many=True, context={"request": request}
         )
         pagination = MyPaginationClass()
         paginated_data = pagination.paginate_queryset(
@@ -660,7 +660,7 @@ class GetTeacherListAPI(viewsets.ModelViewSet):
             queryset = queryset.filter(country=params.get("country"))
 
         serializer = TeacherSerializer(
-            queryset, many=True
+            queryset, many=True, context={"request": request}
         )
         pagination = MyPaginationClass()
         paginated_data = pagination.paginate_queryset(
@@ -766,7 +766,7 @@ class GetStudentListAPI(viewsets.ModelViewSet):
         if params.get("country"):
             queryset = queryset.filter(country=params.get("country"))
         serializer = StudentSerializer(
-            queryset, many=True
+            queryset, many=True, context={"request": request}
         )
         pagination = MyPaginationClass()
         paginated_data = pagination.paginate_queryset(
