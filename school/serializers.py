@@ -27,7 +27,7 @@ class SchoolSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if instance.logo_img:
             return generate_absolute_uri(request, instance.logo_img.url)
-        return ""
+        return None
 
 
 class CreateSchoolSerializer(serializers.ModelSerializer):

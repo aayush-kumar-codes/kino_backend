@@ -5,13 +5,14 @@ from .serializers import (
     AccessRequestSerializer, RoleSerializer, ActivitySerializer,
     UpdateConfigSerializer, TwoFALoginSerializer, UpdatePasswordSerializer,
     ParentSerializer, TeacherSerializer, StudentSerializer, FlnSerializer,
-    GetAllParentSerializer, CreateMemberSerializer
+    GetAllParentSerializer, CreateMemberSerializer, RollCallSerializer
 )
 from rest_framework import permissions, status
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import (
-    User, CustomPermission, ActivityLog, OTP, Parent, Teacher, Student, FLNImpact
+    User, CustomPermission, ActivityLog, OTP, Parent, Teacher, Student,
+    FLNImpact, RollCall
 )
 from django.core.mail import send_mail
 from django.conf import settings
@@ -28,12 +29,13 @@ from utils.paginations import MyPaginationClass
 from school.models import School, Organization, Class
 from django.utils import timezone
 from django.contrib.auth import authenticate
-from .utils import OTPgenerate
+from .utils import OTPgenerate, graph_data
 from rest_framework import filters, viewsets
 from django.db.models import Sum
 from subscription.models import Item, Invoice, Subscription
 from django.core.files.base import ContentFile
 from school.utils import get_school_obj
+from datetime import date, timedelta
 
 # Create your views here.
 
@@ -449,7 +451,9 @@ class VerifyOTP(APIView):
             else:
                 otp_instance.save()
 
-                refresh = RefreshToken.for_user(user_instance)
+                token = RefreshToken.for_user(user_instance)
+                access_token = token.access_token
+                access_token["role"] = user_instance.role
                 if user_instance.remember_me:
                     request.session.set_expiry(settings.SESSION_COOKIE_AGE)
                     request.session.modified = True
@@ -459,8 +463,9 @@ class VerifyOTP(APIView):
                     'email': user_instance.email,
                     'first_name': user_instance.first_name,
                     'last_name': user_instance.last_name,
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
+                    'refresh': str(token),
+                    'access': str(access_token),
+                    'is_two_factor': user_instance.is_two_factor,
                 }
                 response = Response(data, status=200)
                 if user_instance.is_activity_log:
@@ -564,18 +569,18 @@ class ClassBasedParentCount(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        queryset = Student.objects.all()
-        K1 = queryset.filter(_class=1).values_list("parent").distinct().count()
-        K2 = queryset.filter(_class=2).values_list("parent").distinct().count()
-        K3 = queryset.filter(_class=3).values_list("parent").distinct().count()
-
-        data = {
-            "K1": K1,
-            "K2": K2,
-            "K3": K3
-        }
-        response = Response(data)
-        response.success_message = "Counted Data."
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = Parent.objects.filter(user__school_users=school)
+        classes = queryset.values_list("student_parent___class__name").distinct()
+        dict = {}
+        for i in list(classes):
+            parents = queryset.filter(student_parent___class__name=i[0]).count()
+            dict[i[0]] = parents
+        dict.pop(None)
+        response = Response(dict, status=200)
+        response.success_message = "countend data."
         return response
 
 
@@ -792,7 +797,159 @@ class ClassBasedStudentCount(APIView):
         dict = {}
         for i in list(classes):
             students = queryset.filter(student___class__name=i[0]).count()
-        dict[i[0]] = students
+            dict[i[0]] = students
         response = Response(dict, status=200)
         response.success_message = "countend data."
         return response
+
+
+class RollCallAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        params = self.request.query_params
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+
+        queryset = RollCall.objects.filter(student__user__school_users=school)
+
+        total_attendance = queryset.filter(attendance=RollCall.Present).count()
+        total_absent = queryset.filter(attendance=RollCall.Absent).count()
+        total_students = school.users.filter(role=User.Student).count()
+
+        if params.get("class"):
+            queryset = queryset.filter(student___class__name=params.get("class"))
+        if params.get("date"):
+            queryset = queryset.filter(date=params.get("date"))
+        if params.get("year"):
+            queryset = queryset.filter(date__year=params.get("year"))
+
+        serializer = RollCallSerializer(
+            queryset, many=True, context={"request": request}
+            )
+        pagination = MyPaginationClass()
+        data = {
+            "total_students": total_students,
+            "total_attendance": total_attendance,
+            "total_absent": total_absent
+        }
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        paginated_response.update(data)
+        response = Response(paginated_response)
+        response.success_message = "Roll-call Data."
+        return response
+
+
+class RollCallBarGraphAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        params = self.request.query_params
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = RollCall.objects.filter(student__user__school_users=school)
+        lists, key = graph_data(params)
+        data = []
+        for value in lists:
+            roll_call_count = queryset.filter(key[value])
+            if roll_call_count:
+                data.append(
+                    [
+                        value,
+                        roll_call_count.filter(attendance=RollCall.Present).count(),
+                        roll_call_count.filter(attendance=RollCall.Absent).count(),
+                        roll_call_count.filter(attendance=RollCall.Excuse).count(),
+                    ]
+                )
+            else:
+                data.append(
+                    [
+                        value, 0, 0, 0
+                    ]
+                )
+        return Response(data)
+
+
+class RollCallPieChartAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        params = self.request.query_params
+        interval = params.get('interval')
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        roll_call = RollCall.objects.filter(student__user__school_users=school)
+
+        if interval == 'weekly':
+            start_date = date.today() - timedelta(days=date.today().weekday())
+            end_date = start_date + timedelta(days=6)
+        elif interval == 'monthly':
+            start_date = date.today().replace(day=1)
+            next_month = start_date.replace(day=28) + timedelta(days=4)
+            end_date = next_month - timedelta(days=next_month.day)
+        else:
+            start_date = date.today()
+            end_date = start_date
+        
+        _class = roll_call.values_list("student___class__name").distinct()
+        list_data = []
+        for i in list(_class):
+            queryset = roll_call.filter(
+                attendance=RollCall.Absent,
+                date__range=(start_date, end_date),
+                student___class__name=i[0]
+            ).count()
+            list_data.append(
+                [
+                    i[0], queryset
+                ]
+            )
+        starting = date.today().replace(day=1)
+        next_month = starting.replace(day=28) + timedelta(days=4)
+        last_date = next_month - timedelta(days=next_month.day)
+        month_absentees = roll_call.filter(
+                attendance=RollCall.Absent,
+                date__range=(starting, last_date),
+            ).count()
+        data = {
+            "list_data": list_data,
+            "most_absentees": month_absentees
+        }
+        response = Response(data)
+        response.success_message = "Pie Data."
+        return response
+
+
+class RollCount(APIView):
+    def get(self, request):
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        roll_call = RollCall.objects.filter(student__user__school_users=school)
+        starting = date.today().replace(day=1)
+        next_month = starting.replace(day=28) + timedelta(days=4)
+        last_date = next_month - timedelta(days=next_month.day)
+        month_present = roll_call.filter(
+                attendance=RollCall.Present,
+                date__range=(starting, last_date),
+            ).count()
+        month_absentees = roll_call.filter(
+                attendance=RollCall.Absent,
+                date__range=(starting, last_date),
+            ).count()
+        total = month_present + month_absentees
+        percentage = (month_present * 100) / total
+        data = {
+            "summery_percentage": round(percentage),
+            "present": month_present,
+            "absent": month_absentees
+        }
+        return Response(data)

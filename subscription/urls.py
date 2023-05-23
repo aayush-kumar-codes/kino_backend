@@ -1,7 +1,9 @@
 from django.urls import path
 from .views import (
     CreatePlanAPI, CreateBenefitAPI, GetPlan, FinanceAPI,
-    GraphDataAPI, InvoiceAPI, InvoiceListAPI, InvoicePreData
+    GraphDataAPI, InvoiceAPI, InvoiceListAPI, InvoicePreData,
+    SchoolSubscriptionAPI, AccountPersonalAPI, SchoolPaymentHistoryAPI,
+    SchoolInvoiceAPI
 )
 
 urlpatterns = [
@@ -15,5 +17,10 @@ urlpatterns = [
     path('invoice/<int:pk>/', InvoiceAPI.as_view(), name='view'),
     path('invoices_data/', InvoiceListAPI.as_view(), name='list_all_invoice'),
     path('invoice_pre/', InvoicePreData.as_view(), name='invoice_pre'),
+
+    path('school_subscription/', SchoolSubscriptionAPI.as_view(), name='school_subscription'),
+    path('user_data/', AccountPersonalAPI.as_view(), name='user_data'),
+    path('payment_history/', SchoolPaymentHistoryAPI.as_view(), name='payment_history'),
+    path('school_invoice/', SchoolInvoiceAPI.as_view(), name='school_invoice'),
 
 ]

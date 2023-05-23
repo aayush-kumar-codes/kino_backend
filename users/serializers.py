@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from .models import User, ActivityLog, Parent, Teacher, Student, FLNImpact
-from school.models import School
+from .models import (
+    User, ActivityLog, Parent, Teacher, Student, FLNImpact,
+    RollCall, Address
+)
 
 # UserSerializer: Serializer for User model
 class UserSerializer(serializers.ModelSerializer):
@@ -84,10 +86,18 @@ class CreateMemberSerializer(serializers.Serializer):
 
 class ParentSerializer(serializers.ModelSerializer):
     user = UserDataSerializer()
+    assigned_students = serializers.SerializerMethodField(read_only=True)
+    assigned_schools = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Parent
         fields = ("__all__")
+
+    def get_assigned_students(self, instance):
+        return instance.student_parent.count()
+
+    def get_assigned_schools(self, instance):
+        return instance.user.school_users.count()
 
 
 class TeacherSerializer(serializers.ModelSerializer):
@@ -130,3 +140,55 @@ class FlnSerializer(serializers.ModelSerializer):
     class Meta:
         model = FLNImpact
         fields = ("accessment_area", "numbers")
+
+class RollCallSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    _class = serializers.CharField(source="student._class")
+    dob = serializers.CharField(source="student.user.dob")
+    gender = serializers.CharField(source="student.user.gender")
+    total_days_present = serializers.SerializerMethodField()
+    total_days_absent = serializers.SerializerMethodField()
+    profile_img = serializers.ImageField(source="student.user.profile_img")
+    class Meta:
+        model = RollCall
+        fields = (
+            "id", "attendance", "name", "_class", "dob", "gender",
+            "total_days_present", "total_days_absent", "profile_img"
+        )
+
+    def get_name(self, instance):
+        return f"{instance.student.user.first_name} {instance.student.user.last_name}"
+
+    def get_total_days_present(self, instance):
+        return instance.student.student_role_calls.filter(attendance=RollCall.Present).count()
+
+    def get_total_days_absent(self, instance):
+        return instance.student.student_role_calls.filter(attendance=RollCall.Absent).count()
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ("street", "city", "district", "region", "zip_code", "country")
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    address = AddressSerializer(source="user_address", many=True)
+
+    class Meta:
+        model = User
+        fields = ("first_name", 'last_name', 'email', 'mobile_no', "address")
+
+
+# class UserSerializer(serializers.ModelSerializer):
+#     user_address = AddressSerializer(many=True)
+#     class Meta:
+#         model = User
+#         fields = ('username', 'email', 'first_name', 'last_name', 'mobile_no','user_address')
+
+#     def create(self, validated_data):
+#         addresses_data = validated_data.pop('user_address')
+#         user = User.objects.create(**validated_data)
+#         for address_data in addresses_data:
+#             Address.objects.create(user=user, **address_data)
+#         return user

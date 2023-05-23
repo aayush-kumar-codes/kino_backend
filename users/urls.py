@@ -5,7 +5,8 @@ from .views import (
     UpdatePasswordAPIView, DashboardAPI, ActivityAction, VerifyOTP,
     GetParentListAPI, GetTeacherListAPI, GetStudentListAPI,
     ClassBasedStudentCount, ClassBasedParentCount, StudentAPI, TeacherAPI,
-    ParentAPI, GetAllParentsAPI
+    ParentAPI, GetAllParentsAPI, RollCallAPI, RollCallBarGraphAPI,
+    RollCallPieChartAPI
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView
@@ -59,5 +60,9 @@ urlpatterns = [
 
     path('class_std_count/', ClassBasedStudentCount.as_view(), name='class_std_count'),
     path('all_parents/', GetAllParentsAPI.as_view(), name='all_parents'),
+
+    path('roll_call/', RollCallAPI.as_view(), name='roll_call'),
+    path('roll_call_graph/', RollCallBarGraphAPI.as_view(), name='roll_call_graph'),
+    path('roll_call_pie/', RollCallPieChartAPI.as_view(), name='roll_call_pie'),
 
 ]

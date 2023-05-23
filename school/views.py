@@ -306,15 +306,13 @@ class LessonAPI(APIView):
         return response
 
 
-class GetLessonListAPI(viewsets.ModelViewSet):
+class GetLessonListAPI(APIView):
     permission_classes = (IsAuthenticated,)
-    queryset = Lesson.objects.all()
-    serializer_class = LessonSerializer
     filter_backends = (filters.SearchFilter)
     search_fields = ['id', 'name']
 
-    def list(self, request, pk=None):
-        queryset = self.queryset
+    def get(self, request, pk=None):
+        queryset = Lesson.objects.all()
         params = self.request.query_params
         if pk:
             queryset = queryset.filter(pk=pk)
@@ -478,7 +476,7 @@ class ParentDataAPI(viewsets.ModelViewSet):
         school = get_school_obj(request)
         if not school:
             return Response("School not found.")
-        queryset = Parent.objects.filter(user__school_users=school, user__role=User.Parent)
+        queryset = Parent.objects.filter(user__school_users=school)
 
         if params.get("pk"):
             queryset = queryset.filter(pk=params.get("pk"))

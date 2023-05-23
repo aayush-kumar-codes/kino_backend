@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from .serializers import (
     PlanSerializer, BenefitSerializer, GetPlanSerializer,
     SubscriptionSerializer, ItemSerializer, InvoiceListSerializer,
-    UserUpdateSerializer, UserSerializer, ItemSerializers
+    UserUpdateSerializer, UserSerializer, ItemSerializers,
+    SchoolSubscriptionSerializer, SchoolPaymentHistorySerializer
 )
 from rest_framework.permissions import IsAuthenticated
 from utils.custom_permissions import AdminAccess
@@ -16,6 +17,8 @@ from .utils import graph_data, generate_invoice_number
 from django.shortcuts import get_object_or_404
 from django.core.files.base import ContentFile
 from django.db.models import Sum
+from school.utils import get_school_obj
+from users.serializers import AccountSerializer
 
 # Create your views here.
 
@@ -353,4 +356,68 @@ class InvoicePreData(APIView):
         )
         response = Response(serializer.data, status=200)
         response.success_message = "User Address Updated."
+        return response
+
+
+class SchoolSubscriptionAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        subscription = Subscription.objects.get(school=school.id)
+        serializer = SchoolSubscriptionSerializer(subscription)
+        response = Response(serializer.data)
+        response.success_message = "Subscription data."
+        return response
+
+
+class AccountPersonalAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        user = request.user
+        serializer = AccountSerializer(user)
+        response = Response(serializer.data)
+        response.success_message = "user data."
+        return response
+
+    def patch(self, request):
+        user = request.user
+        serializer = AccountSerializer(
+            user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response = Response(serializer.data)
+        response.success_message = "User profile updated."
+        return response
+
+
+class SchoolPaymentHistoryAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = Subscription.objects.get(school=school.id)
+        serializer = SchoolPaymentHistorySerializer(queryset)
+        response = Response(serializer.data)
+        response.success_message = "Payment History."
+        return response
+
+class SchoolInvoiceAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = Invoice.objects.all()
+        invoice = queryset.filter(organization__organization=school)
+        serializer = ItemSerializers(invoice, many=True, context={"request": request})
+        response = Response(serializer.data)
+        response.success_message = "School invoice."
         return response

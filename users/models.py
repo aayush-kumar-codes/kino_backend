@@ -59,8 +59,6 @@ class User(AbstractUser):
     )
     dob = models.DateField(null=True, blank=True)
     mobile_no = PhoneNumberField(unique=True, null=True, blank=True)
-    address = models.CharField(max_length=512, blank=True)
-    zip_code = models.CharField(max_length=10, blank=True)
 
     profile_img = models.ImageField(
         upload_to=get_file_path, height_field=None,
@@ -86,6 +84,19 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         self.username = self.email
         super().save(*args, **kwargs)
+
+
+class Address(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_address")
+    street = models.CharField(max_length=250)
+    city = models.CharField(max_length=124)
+    district = models.CharField(max_length=200)
+    region = models.CharField(max_length=255)
+    zip_code = models.CharField(max_length=10, null=True, blank=True)
+    country = models.CharField(max_length=200)
+
+    def __str__(self):
+        return f'{self.street} {self.city} {self.district} {self.region} {self.country} {self.zip_code}'
 
 
 class ActivityLog(models.Model):
@@ -201,3 +212,25 @@ class FLNImpact(models.Model):
 
     def __str__(self):
         return self.accessment_area
+
+
+class RollCall(models.Model):
+    Present = 'P'
+    Absent = 'A'
+    Excuse = 'E'
+    ATTENDANCE_CHOICES = (
+        (Present, 'Present'),
+        (Absent, 'Absent'),
+        (Excuse, 'Excuse'),
+    )
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE,
+        related_name='student_role_calls'
+    )
+    date = models.DateField()
+    attendance = models.CharField(
+        max_length=1, choices=ATTENDANCE_CHOICES
+    )
+
+    def __str__(self):
+        return f"{self.student.user.first_name} {self.student.user.last_name} - {self.date}"

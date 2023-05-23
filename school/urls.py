@@ -25,8 +25,8 @@ urlpatterns = [
     # URL pattern for lesson create/get/update/delete
     path('lesson/', LessonAPI.as_view(), name='create_lesson'),
     path('lesson/<int:pk>/', LessonAPI.as_view(), name='lesson_by_id'),
-    path('get_lessons/', GetLessonListAPI.as_view({'get': 'list'}), name='get_lessons'),
-    path('get_lessons/<int:pk>/', GetLessonListAPI.as_view({'get': 'list'}), name='get_lessons'),
+    path('get_lessons/', GetLessonListAPI.as_view(), name='get_lessons'),
+    path('get_lessons/<int:pk>/', GetLessonListAPI.as_view(), name='get_lessons'),
     path('organization/', GetOrganizationsListAPI.as_view({'get': 'list'}), name='organization'),
     path('school/dashboard/', SchoolDashboardAPI.as_view(), name='dashboard'),
     path('coverage/', LessonCoverageAPI.as_view(), name='coverage'),

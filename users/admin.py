@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from .models import (
     User, CustomPermission, ActivityLog, OTP, Parent, Teacher,
-    Student, FLNImpact
+    Student, FLNImpact,RollCall, Address
 )
 # Register your models here.
 
@@ -14,3 +14,5 @@ admin.site.register(Parent)
 admin.site.register(Teacher)
 admin.site.register(Student)
 admin.site.register(FLNImpact)
+admin.site.register(RollCall)
+admin.site.register(Address)

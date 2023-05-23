@@ -153,3 +153,34 @@ class ItemSerializers(serializers.ModelSerializer):
     def get_total_amount(self, instance):
         total = instance.invoice_amount.aggregate(Sum('amount'))['amount__sum']
         return total
+
+
+class SchoolSubscriptionSerializer(serializers.ModelSerializer):
+    plan_name = serializers.CharField(source="plan.name", read_only=True)
+    price = serializers.CharField(source="plan.price", read_only=True)
+    benefits = BenefitSerializer(many=True, read_only=True, source="plan.benefits")
+
+    class Meta:
+        model = Subscription
+        fields = ("plan_name", "price", "start_date", "end_date", "benefits",)
+
+
+class SchoolPaymentHistorySerializer(serializers.ModelSerializer):
+    plan_name = serializers.CharField(source="plan.name", read_only=True)
+    created_at = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Subscription
+        fields = ("id", "plan_name", "created_at", "end_date", "amount", "status")
+
+    def get_created_at(self, instance):
+        return str(instance.created_at).split()[0]
+
+    def get_status(self, status_instance):
+        status = status_instance.get_is_paid_display()
+        return status
+
+    def get_amount(self, instance):
+        return str(instance.school.organization.organization_invoice.last().invoice_amount.last().amount)
