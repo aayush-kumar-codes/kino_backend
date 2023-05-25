@@ -16,12 +16,13 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from .models import School, Class, Term, Lesson, Organization, User
 from users.models import FLNImpact, Teacher, Student, Parent
-from subscription.models import Subscription
+from users.models import RollCall
 from utils.paginations import MyPaginationClass
 from rest_framework import filters, viewsets
 from datetime import datetime
 from django.db.models import Sum
 from .utils import get_school_obj
+from datetime import date, timedelta
 
 # Create your views here.
 
@@ -233,7 +234,7 @@ class ClassAPI(APIView):
 
 
 class LessonAPI(APIView):
-    permission_classes = (IsAuthenticated, ContentCreatorAccess,)
+    permission_classes = (IsAuthenticated, SchoolAdminAccess,)
 
     def get_required_permissions(self):
         if self.request.method == "GET":
@@ -244,6 +245,11 @@ class LessonAPI(APIView):
             return PermissonChoices.NULL
 
     def post(self, request):
+        data = request.data
+
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
 
         _class_name = request.data.pop("_class", "NA")
         _class, _ = Class.objects.get_or_create(
@@ -253,8 +259,9 @@ class LessonAPI(APIView):
                 "end_date": datetime.today()
             }
         )
+        data["school"] = school.id
         # Initialize a LessonSerializer with the request data
-        serializer = LessonSerializer(data=request.data)
+        serializer = LessonSerializer(data=data)
 
         # Validate the request data and save the new lession if validation is successful
         serializer.is_valid(raise_exception=True)
@@ -266,7 +273,10 @@ class LessonAPI(APIView):
         return response
 
     def get(seif, request, pk=None):
-        queryset = Lesson.objects.all()
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = Lesson.objects.filter(school=school.id)
         if pk:
             queryset = queryset.filter(pk=pk)
         serializer = LessonSerializer(queryset, many=True)
@@ -312,7 +322,10 @@ class GetLessonListAPI(APIView):
     search_fields = ['id', 'name']
 
     def get(self, request, pk=None):
-        queryset = Lesson.objects.all()
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        queryset = Lesson.objects.filter(school=school.id)
         params = self.request.query_params
         if pk:
             queryset = queryset.filter(pk=pk)
@@ -377,7 +390,23 @@ class SchoolDashboardAPI(APIView):
     def get(self, request):
         impact = FLNImpact.objects.all()
         school = get_school_obj(request)
-        lessons = Lesson.objects.all()
+        if not school:
+            return Response("School not found.")
+        roll_call = RollCall.objects.filter(student__user__school_users=school)
+        starting = date.today().replace(day=1)
+        next_month = starting.replace(day=28) + timedelta(days=4)
+        last_date = next_month - timedelta(days=next_month.day)
+        month_present = roll_call.filter(
+                attendance=RollCall.Present,
+                date__range=(starting, last_date),
+            ).count()
+        month_absentees = roll_call.filter(
+                attendance=RollCall.Absent,
+                date__range=(starting, last_date),
+            ).count()
+        total = month_present + month_absentees
+        percentage = (month_present * 100) / total
+        lessons = Lesson.objects.filter(school=school.id)
         is_covered = lessons.filter(is_covered=True)
         serializer = FlnSerializer(impact, many=True)
         schoolserializer = SchoolDashboardSerializer(school)
@@ -388,6 +417,9 @@ class SchoolDashboardAPI(APIView):
                 "Total": lessons.count()
             },
             **schoolserializer.data,
+            "summery_percentage": round(percentage),
+            "present": month_present,
+            "absent": month_absentees,
             "fln_over_all": impact.aggregate(Sum("numbers"))["numbers__sum"],
             "fln_impact": serializer.data
         }
@@ -400,14 +432,18 @@ class LessonCoverageAPI(APIView):
     permission_classes = (IsAuthenticated, SchoolAdminAccess,)
 
     def get(self, request):
-        lessons = Lesson.objects.all()
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        lessons = Lesson.objects.filter(school=school.id)
         classes = lessons.values_list("_class__name").distinct()
-        dict = {}
+        list_data = []
         for i in list(classes):
             is_covered = lessons.filter(_class__name=i[0], is_covered=True).count()
             _class = lessons.filter(_class__name=i[0]).count()
-            dict[i[0]] = {"covered": is_covered, "total": _class}
-        response = Response(dict)
+            class_data = {"class": i[0], "covered": is_covered, "total": _class}
+            list_data.append(class_data)
+        response = Response(list_data)
         response.success_message = "Coverage Data."
         return response
 
@@ -547,3 +583,22 @@ class SchoolDetailsAPI(APIView):
         response = Response(serializer.data, status=200)
         response.success_message = "School Data."
         return response
+
+    def patch(self, request):
+        school = get_school_obj(request)
+        if school is None:
+            return Response("School not found.")
+        try:
+            serializer = SchoolSerializer(
+                school, data=request.data, context={"request": request},
+                partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            response = Response(serializer.data, status=200)
+            response.success_message = "School Updated."
+            return response
+        except Exception as e:
+            response = Response(status=400)
+            response.error_message = str(e)
+            return response

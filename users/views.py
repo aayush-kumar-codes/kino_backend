@@ -926,30 +926,3 @@ class RollCallPieChartAPI(APIView):
         response = Response(data)
         response.success_message = "Pie Data."
         return response
-
-
-class RollCount(APIView):
-    def get(self, request):
-        school = get_school_obj(request)
-        if not school:
-            return Response("School not found.")
-        roll_call = RollCall.objects.filter(student__user__school_users=school)
-        starting = date.today().replace(day=1)
-        next_month = starting.replace(day=28) + timedelta(days=4)
-        last_date = next_month - timedelta(days=next_month.day)
-        month_present = roll_call.filter(
-                attendance=RollCall.Present,
-                date__range=(starting, last_date),
-            ).count()
-        month_absentees = roll_call.filter(
-                attendance=RollCall.Absent,
-                date__range=(starting, last_date),
-            ).count()
-        total = month_present + month_absentees
-        percentage = (month_present * 100) / total
-        data = {
-            "summery_percentage": round(percentage),
-            "present": month_present,
-            "absent": month_absentees
-        }
-        return Response(data)

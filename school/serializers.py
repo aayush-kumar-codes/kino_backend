@@ -8,6 +8,7 @@ from subscription.models import Subscription
 class SchoolSerializer(serializers.ModelSerializer):
     subscriptions = serializers.SerializerMethodField()
     logo_img = serializers.SerializerMethodField()
+    grades_offered = serializers.SerializerMethodField()
     organization = serializers.CharField(
         source="organization.name", default=None,
         read_only=True
@@ -16,6 +17,13 @@ class SchoolSerializer(serializers.ModelSerializer):
     class Meta:
         model = School
         exclude = ("users", "cover")
+
+    def get_grades_offered(self, instance):
+        if instance.school_lesson.values_list("_class__name"):
+            classes = instance.school_lesson.values_list("_class__name", flat=True).distinct()
+            value = list(classes)
+            return f"{value[0]}-{value[-1]}"
+        return ""
 
     def get_subscriptions(self, instance):
         try:

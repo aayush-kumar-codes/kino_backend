@@ -99,6 +99,10 @@ class Class(models.Model):
 
 
 class Lesson(models.Model):
+    school = models.ForeignKey(
+        School, on_delete=models.CASCADE, null=True,
+        blank=True, related_name="school_lesson"
+    )
     name = models.CharField(max_length=124)
     subject_id = models.CharField(max_length=124)
     _class = models.ForeignKey(

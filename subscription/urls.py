@@ -3,7 +3,7 @@ from .views import (
     CreatePlanAPI, CreateBenefitAPI, GetPlan, FinanceAPI,
     GraphDataAPI, InvoiceAPI, InvoiceListAPI, InvoicePreData,
     SchoolSubscriptionAPI, AccountPersonalAPI, SchoolPaymentHistoryAPI,
-    SchoolInvoiceAPI
+    SchoolInvoiceAPI, SchoolCancelPlanAPI
 )
 
 urlpatterns = [
@@ -22,5 +22,6 @@ urlpatterns = [
     path('user_data/', AccountPersonalAPI.as_view(), name='user_data'),
     path('payment_history/', SchoolPaymentHistoryAPI.as_view(), name='payment_history'),
     path('school_invoice/', SchoolInvoiceAPI.as_view(), name='school_invoice'),
+    path('school_plan_cancel/', SchoolCancelPlanAPI.as_view(), name='school_plan_cancel'),
 
 ]

@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404
 from django.core.files.base import ContentFile
 from django.db.models import Sum
 from school.utils import get_school_obj
-from users.serializers import AccountSerializer
+from users.serializers import AccountSerializer, Address
 
 # Create your views here.
 
@@ -366,11 +366,20 @@ class SchoolSubscriptionAPI(APIView):
         school = get_school_obj(request)
         if not school:
             return Response("School not found.")
-        subscription = Subscription.objects.get(school=school.id)
-        serializer = SchoolSubscriptionSerializer(subscription)
-        response = Response(serializer.data)
-        response.success_message = "Subscription data."
-        return response
+        try:
+            subscription = Subscription.objects.get(school=school.id)
+            if subscription.is_active:
+                serializer = SchoolSubscriptionSerializer(subscription)
+                response = Response(serializer.data)
+                response.success_message = "Subscription data."
+                return response
+            response = Response(status=400)
+            response.error_message = "Subscription is not activate."
+            return response
+        except Exception as e:
+            response = Response(status=400)
+            response.error_message = "You have no any Subscription."
+            return response
 
 
 class AccountPersonalAPI(APIView):
@@ -390,7 +399,22 @@ class AccountPersonalAPI(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        response = Response(serializer.data)
+
+        if 'address' in request.data:
+            address_data = request.data['address']
+            address_data["user"] = request.user.id
+            Address.objects.update_or_create(
+                user = request.user.id,
+                defaults={
+                    'street': address_data["street"],
+                    "city": address_data["city"],
+                    "district": address_data["district"],
+                    "region": address_data["region"],
+                    "zip_code": address_data["zip_code"],
+                    "country": address_data["country"]
+                },
+            )
+        response = Response(status=200)
         response.success_message = "User profile updated."
         return response
 
@@ -402,9 +426,16 @@ class SchoolPaymentHistoryAPI(APIView):
         school = get_school_obj(request)
         if not school:
             return Response("School not found.")
-        queryset = Subscription.objects.get(school=school.id)
-        serializer = SchoolPaymentHistorySerializer(queryset)
-        response = Response(serializer.data)
+        queryset = Subscription.objects.filter(school=school.id)
+        serializer = SchoolPaymentHistorySerializer(queryset, many=True)
+        pagination = MyPaginationClass()
+        paginated_data = pagination.paginate_queryset(
+            serializer.data, request
+        )
+        paginated_response = pagination.get_paginated_response(
+            paginated_data
+        ).data
+        response = Response(paginated_response)
         response.success_message = "Payment History."
         return response
 
@@ -412,12 +443,33 @@ class SchoolInvoiceAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
+        params = self.request.query_params
         school = get_school_obj(request)
         if not school:
             return Response("School not found.")
-        queryset = Invoice.objects.all()
-        invoice = queryset.filter(organization__organization=school)
-        serializer = ItemSerializers(invoice, many=True, context={"request": request})
+        if not params.get("pk"):
+            return Response("pk is missing in params.")
+        queryset = Invoice.objects.filter(
+            organization__organization=school, pk=params.get("pk")
+        )
+        serializer = ItemSerializers(
+            queryset, many=True, context={"request": request}
+        )
         response = Response(serializer.data)
         response.success_message = "School invoice."
+        return response
+
+
+class SchoolCancelPlanAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def delete(self, request):
+        school = get_school_obj(request)
+        if not school:
+            return Response("School not found.")
+        subscription = get_object_or_404(Subscription, school=school.id)
+        subscription.is_active = False
+        subscription.save()
+        response = Response(status=200)
+        response.success_message = "School Subscription cancelled successfully."
         return response

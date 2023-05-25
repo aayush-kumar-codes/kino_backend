@@ -55,6 +55,7 @@ class Subscription(models.Model):
     updated_at = models.DateTimeField(
         auto_now_add=False, null=True, blank=True
     )
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.school.name}'s {self.plan.name} Subscription"

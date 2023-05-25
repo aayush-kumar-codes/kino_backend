@@ -169,15 +169,20 @@ class RollCallSerializer(serializers.ModelSerializer):
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
-        fields = ("street", "city", "district", "region", "zip_code", "country")
+        fields = ("user", "street", "city", "district", "region", "zip_code", "country")
 
 
 class AccountSerializer(serializers.ModelSerializer):
-    address = AddressSerializer(source="user_address", many=True)
+    address = AddressSerializer(source="user_address", many=True, read_only=True)
 
     class Meta:
         model = User
-        fields = ("first_name", 'last_name', 'email', 'mobile_no', "address")
+        fields = ("first_name", 'last_name', 'email', 'dob', 'mobile_no', "address")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['address'] = data['address'][0]
+        return data
 
 
 # class UserSerializer(serializers.ModelSerializer):

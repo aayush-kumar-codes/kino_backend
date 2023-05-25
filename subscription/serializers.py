@@ -156,24 +156,30 @@ class ItemSerializers(serializers.ModelSerializer):
 
 
 class SchoolSubscriptionSerializer(serializers.ModelSerializer):
+    school_name = serializers.CharField(source="school.name")
     plan_name = serializers.CharField(source="plan.name", read_only=True)
     price = serializers.CharField(source="plan.price", read_only=True)
     benefits = BenefitSerializer(many=True, read_only=True, source="plan.benefits")
 
     class Meta:
         model = Subscription
-        fields = ("plan_name", "price", "start_date", "end_date", "benefits",)
+        fields = ("school_name", "plan_name", "price", "start_date", "end_date", "benefits",)
 
 
 class SchoolPaymentHistorySerializer(serializers.ModelSerializer):
+    invoice_id = serializers.SerializerMethodField()
     plan_name = serializers.CharField(source="plan.name", read_only=True)
     created_at = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
+    balance = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
 
     class Meta:
         model = Subscription
-        fields = ("id", "plan_name", "created_at", "end_date", "amount", "status")
+        fields = ("id", "invoice_id", "plan_name", "created_at", "end_date", "amount", "balance", "status",)
+
+    def get_invoice_id(self, instance):
+        return instance.school.organization.organization_invoice.last().id
 
     def get_created_at(self, instance):
         return str(instance.created_at).split()[0]
@@ -184,3 +190,9 @@ class SchoolPaymentHistorySerializer(serializers.ModelSerializer):
 
     def get_amount(self, instance):
         return str(instance.school.organization.organization_invoice.last().invoice_amount.last().amount)
+
+    def get_balance(self, instance):
+        if instance.is_paid == Subscription.Paid:
+            return 0
+        if instance.is_paid == Subscription.Unpaid:
+            return str(instance.school.organization.organization_invoice.last().invoice_amount.last().amount)

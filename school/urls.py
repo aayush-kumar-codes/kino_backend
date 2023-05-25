@@ -34,6 +34,6 @@ urlpatterns = [
     path('std_list/', StudentDataAPI.as_view({'get': 'list'}), name='std_list'),
     path('parent_list/', ParentDataAPI.as_view({'get': 'list'}), name='parent_list'),
     path('teacher_list/', TeacherDataAPI.as_view({'get': 'list'}), name='teacher_list'),
-    path('school_detail/', SchoolDetailsAPI.as_view(), name='school_detail'),
+    path('school_profile/', SchoolDetailsAPI.as_view(), name='school_profile'),
 
 ]

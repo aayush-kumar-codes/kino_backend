@@ -86,6 +86,10 @@ class SchoolAdminAccess(BasePermission):
     def has_permission(self, request, view):
         if request.user and request.user.role == User.School_Admin:
             return True
+        required_permissions, permissions = get_view_permissions(request, view)
+        if request.user and request.user.role == User.Content_creator:
+            if required_permissions in list(permissions):
+                return True
         return False
 
 
