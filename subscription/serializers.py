@@ -95,16 +95,16 @@ class InvoiceListSerializer(serializers.ModelSerializer):
         return ""
 
 
-class UserUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('address')
-
-
 class UserSerializer(serializers.ModelSerializer):
+    address = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ["id", 'mobile_no', 'address', 'zip_code']
+        fields = ["id", 'mobile_no', 'address']
+
+    def get_address(self, instance):
+        if instance.user_address:
+            return f"{instance.user_address.last().street} {instance.user_address.last().city} {instance.user_address.last().district} {instance.user_address.last().region} {instance.user_address.last().zip_code} {instance.user_address.last().country}"
+        return ""
 
 
 class ItemsSerializer(serializers.ModelSerializer):

@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from .serializers import (
     PlanSerializer, BenefitSerializer, GetPlanSerializer,
     SubscriptionSerializer, ItemSerializer, InvoiceListSerializer,
-    UserUpdateSerializer, UserSerializer, ItemSerializers,
+    UserSerializer, ItemSerializers,
     SchoolSubscriptionSerializer, SchoolPaymentHistorySerializer
 )
 from rest_framework.permissions import IsAuthenticated
@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404
 from django.core.files.base import ContentFile
 from django.db.models import Sum
 from school.utils import get_school_obj
-from users.serializers import AccountSerializer, Address
+from users.serializers import AccountSerializer, Address, AddressSerializer
 
 # Create your views here.
 
@@ -351,7 +351,7 @@ class InvoicePreData(APIView):
 
     def patch(self, request):
         user = request.user
-        serializer = UserUpdateSerializer(
+        serializer = AddressSerializer(
             user, data=request.data, partial=True
         )
         response = Response(serializer.data, status=200)

@@ -19,8 +19,9 @@ To get started with KAINO, follow these steps:
 4. Create a MYSQL database and update the `DATABASES` credentials in .env file.
 5. Run database migrations by running `python manage.py makemigrations`.
 6. Run migrate by ruuning  `python manage.py migrate`.
-7. Start the server by running `python manage.py runserver 0.0.0.0:8000`.
-8. Visit `http://localhost:8000` in your web browser to view the app.
+7. Run this command to create some important data in Database  `python manage.py create_sample_data`.
+8. Start the server by running `python manage.py runserver 0.0.0.0:8000`.
+9. Visit `http://localhost:8000` in your web browser to view the app.
 
 ## Technologies Used
 
