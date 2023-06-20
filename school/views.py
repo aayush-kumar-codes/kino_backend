@@ -405,7 +405,10 @@ class SchoolDashboardAPI(APIView):
                 date__range=(starting, last_date),
             ).count()
         total = month_present + month_absentees
-        percentage = (month_present * 100) / total
+        if total and month_present is not None:
+            percentage = (month_present * 100) / total
+        else:
+            percentage = 0
         lessons = Lesson.objects.filter(school=school.id)
         is_covered = lessons.filter(is_covered=True)
         serializer = FlnSerializer(impact, many=True)

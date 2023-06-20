@@ -3,7 +3,8 @@ from .views import (
     CreatePlanAPI, CreateBenefitAPI, GetPlan, FinanceAPI,
     GraphDataAPI, InvoiceAPI, InvoiceListAPI, InvoicePreData,
     SchoolSubscriptionAPI, AccountPersonalAPI, SchoolPaymentHistoryAPI,
-    SchoolInvoiceAPI, SchoolCancelPlanAPI
+    SchoolInvoiceAPI, SchoolCancelPlanAPI, CardPaymentView, MobilePaymentView,
+    WebhookAPI, FlutterwavePlanAPI
 )
 
 urlpatterns = [
@@ -23,5 +24,10 @@ urlpatterns = [
     path('payment_history/', SchoolPaymentHistoryAPI.as_view(), name='payment_history'),
     path('school_invoice/', SchoolInvoiceAPI.as_view(), name='school_invoice'),
     path('school_plan_cancel/', SchoolCancelPlanAPI.as_view(), name='school_plan_cancel'),
+
+    path('card_payment/', CardPaymentView.as_view(), name='card_payment'),
+    path('mobile_payment/', MobilePaymentView.as_view(), name='mobile_payment'),
+    path('webhook/', WebhookAPI.as_view(), name='webhook'),
+    path('flutterwave_plans/', FlutterwavePlanAPI.as_view(), name='flutterwave_plans'),
 
 ]

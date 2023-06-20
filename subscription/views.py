@@ -19,6 +19,18 @@ from django.core.files.base import ContentFile
 from django.db.models import Sum
 from school.utils import get_school_obj
 from users.serializers import AccountSerializer, Address, AddressSerializer
+from rave_python.rave_exceptions import TransactionVerificationError
+from rave_python import RaveExceptions
+from rave_python import Rave
+from dotenv import load_dotenv
+import os, json
+from django.http import HttpResponse
+from .utils import update_invoice, update_subscription
+
+
+load_dotenv()
+PublicKey = os.getenv("PUBLIC_KEY")
+SecretKey = os.getenv("RAVE_SECRET_KEY")
 
 # Create your views here.
 
@@ -439,6 +451,7 @@ class SchoolPaymentHistoryAPI(APIView):
         response.success_message = "Payment History."
         return response
 
+
 class SchoolInvoiceAPI(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -473,3 +486,125 @@ class SchoolCancelPlanAPI(APIView):
         response = Response(status=200)
         response.success_message = "School Subscription cancelled successfully."
         return response
+
+
+class FlutterwavePlanAPI(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        rave = Rave(PublicKey, SecretKey, production=False, usingEnv=True)
+        plans = rave.PaymentPlan.all()
+        payment_plans = plans['returnedData']['data']['paymentplans']
+        result = [{
+            'id': plan['id'], 'name': plan['name'], 'amount': plan['amount'],
+            'interval': plan['interval'], "status": plan["status"],
+            "currency": plan["currency"]
+        } for plan in payment_plans]
+        response = Response(result)
+        response.success_message = "Flutterwave Plans."
+        return response
+
+
+class CardPaymentView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, format=None):
+        school = get_school_obj(request)
+        invoice_no = Invoice.objects.get(organization__organization=school)
+        rave = Rave(PublicKey, SecretKey, production=False, usingEnv=True)
+        txRef = f"{invoice_no.invoice_number}/{school.id}"
+        payload = {
+            "cardno": request.data.get('cardno'),
+            "cvv": request.data.get('cvv'),
+            "expirymonth": request.data.get('expirymonth'),
+            "expiryyear": request.data.get('expiryyear'),
+            "currency": request.data.get('currency'),
+            "country": request.data.get('country'),
+            "amount": request.data.get('amount'),
+            "email": request.data.get('email'),
+            "phonenumber": request.data.get('phonenumber'),
+            "firstname": request.data.get('firstname'),
+            "lastname": request.data.get('lastname'),
+            "IP": request.data.get('IP'),
+            "txRef": txRef,
+            "payment_plan": request.data.get("plan_id"),
+            "meta": {
+                "authorization": {
+                    "invoice_no": invoice_no.invoice_number,
+                    "school_instance": school.id,
+                }
+            }
+        }
+        try:
+            response = rave.Card.charge(payload)
+            if response['validationRequired']:
+                if response['suggestedAuth'] is None:
+                    auth_url = response['authUrl']
+                    # return HttpResponse(status=302, headers={'Location': auth_url})
+                    return Response({"status": "success", "message": "Payment successful", "data": response})
+                else:
+                    if response['suggestedAuth'] == "otp":
+                        auth_url = response['authUrl']
+                        return HttpResponse(status=302, headers={'Location': auth_url})
+                    if response['suggestedAuth'] == 'PIN':
+                        pin_payload = {
+                            "PBFPubKey": PublicKey,
+                            "transaction_reference": response['txRef'],
+                            "PIN": request.data.get("pin")
+                        }
+
+                        pin_response = rave.Card.validate_pin(pin_payload)
+                        return pin_response
+            else:
+                return Response({"status": "error", "message": response["message"]})
+        except RaveExceptions.CardChargeError as e:
+            print(e.err["errMsg"])
+            print(e.err["flwRef"])
+            response = ""
+            return Response(e.err["errMsg"])
+
+
+class MobilePaymentView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, format=None):
+        school = get_school_obj(request)
+        invoice_no = Invoice.objects.get(organization__organization=school)
+        rave = Rave(PublicKey, SecretKey, production=False, usingEnv=True)
+        txRef = f"{invoice_no.invoice_number}/{school.id}"
+        payload = {
+            "phonenumber": request.data.get("phonenumber"),
+            "email": request.data.get("email"),
+            "amount": request.data.get("amount"),
+            "IP": request.data.get("IP"),
+            "txRef": txRef,
+        }
+        response = rave.UGMobile.charge(payload)
+        return Response(response)
+
+
+class WebhookAPI(APIView):
+    def post(self, request):
+        secret_hash = os.getenv("RAVE_SECRET_KEY")
+        signature = request.headers.get("verifi-hash")
+        print(secret_hash, signature, "rrrrrrrr")
+        # if signature == None or (signature != secret_hash):
+        #     # This request isn't from Flutterwave; discard
+        #     return HttpResponse(status=401)
+        payload = request.body
+        print(payload, "qwerty")
+        response_str = payload.decode('utf-8')
+        payload = json.loads(response_str)
+        self.payment_verify(payload)
+        return Response(status=200)
+
+    def payment_verify(self, payload):
+        school_id = payload["data"]["tx_ref"].split("/")[1]
+        if payload["data"]["status"] == "successful":
+            try:
+                update_invoice(payload)
+                update_subscription(payload, school_id)
+            except TransactionVerificationError as e:
+                print(e.err["errMsg"])
+                print(e.err["txRef"])
+                return Response({"status": "error", "message": "Payment verification error"})

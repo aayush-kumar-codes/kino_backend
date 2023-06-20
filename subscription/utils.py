@@ -1,6 +1,11 @@
 from datetime import datetime, timedelta, date, time
 from django.db.models import Q
 import calendar, uuid
+from .models import Invoice, Subscription, School, Plan
+from rave_python import Rave
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 
 def graph_data(params):
@@ -41,3 +46,33 @@ def graph_data(params):
 def generate_invoice_number():
     invoice_number = 'IN{}'.format(str(uuid.uuid4().int)[:12])
     return invoice_number
+
+
+def update_invoice(payload):
+    invoice_no = payload["data"]["tx_ref"].split("/")[0]
+    invoice = Invoice.objects.get(invoice_number=invoice_no)
+    if payload["data"]["status"] == "successful":
+        invoice.status = Invoice.Paid
+        invoice.save()
+    else:
+        invoice.status = Invoice.Unpaid
+        invoice.save()
+
+
+def update_subscription(payload, school_id):
+    PublicKey = os.getenv("PUBLIC_KEY")
+    SecretKey = os.getenv("RAVE_SECRET_KEY")
+    rave = Rave(PublicKey, SecretKey, production=False, usingEnv=True)
+    subscriptions = rave.Subscriptions.all()
+    plans = rave.PaymentPlan.fetch(subscriptions["returnedData"]["data"]["plansubscriptions"][0]["plan"])
+    plaan = Plan.objects.get(name=plans["returnedData"]["data"]["paymentplans"][0]["name"])
+    Subscription.objects.update_or_create(
+        school=school_id,
+        defaults={
+            "plan": plaan,
+            "end_date": subscriptions["returnedData"]["data"]["plansubscriptions"][0]["next_due"].split("T")[0],
+            "is_paid": Subscription.Paid,
+            "updated_at": payload["data"]["created_at"],
+            "is_active": True
+        }
+    )
