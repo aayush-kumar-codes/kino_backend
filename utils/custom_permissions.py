@@ -2,7 +2,76 @@ from rest_framework.permissions import BasePermission
 from users.models import User
 from enum import Enum
 from utils.helper import get_view_permissions
+from auth0.authentication.token_verifier import TokenVerifier, AsymmetricSignatureVerifier
 
+from auth0.authentication.token_verifier import TokenValidationError
+from django.conf import settings
+from rest_framework.authentication import BaseAuthentication
+
+domain = settings.AUTH_0_DOMAIN
+client_id = settings.AUTH_0_CLIENT_ID
+
+
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
+
+class CustomAuthentication(BaseAuthentication):
+    def authenticate(self, request):
+        # Implement your custom authentication logic here
+        # Return a tuple of (user, auth) if authentication is successful
+        # Return None if authentication fails
+        
+        # For example, you can authenticate based on a custom header:
+        # auth_header = request.META.get('HTTP_X_CUSTOM_AUTH_HEADER')
+        
+        # if not auth_header:
+        #     return None  # Authentication failed
+        
+        # Perform your custom authentication logic here, such as validating tokens, API keys, etc.
+        # If authentication is successful, return a user object and None for auth
+        # If authentication fails, raise AuthenticationFailed
+        
+        # Example of token validation (replace with your actual logic):
+        try:
+            print("JTDFGHJNBVBFGHNBVBFGYJUGFYTR^&V^%^T*&()")
+            id_token = request.META.HTTP_AUTHORIZATION.split(" ")[-1]
+            print("YFGBNUHKM<", request.META.HTTP_AUTHORIZATION)
+            jwks_url = 'https://{}/.well-known/jwks.json'.format(settings.AUTH_0_DOMAIN)
+            issuer = 'https://{}/'.format(settings.AUTH_0_DOMAIN)
+
+            sv = AsymmetricSignatureVerifier(jwks_url)  # Reusable instance
+            tv = TokenVerifier(signature_verifier=sv, issuer=issuer, audience=settings.AUTH_0_AUDIENCE)
+
+            tv.verify(str(id_token))
+            return True
+        except Exception:
+            return False
+        
+        # Authentication failed
+        raise AuthenticationFailed('Authentication failed')
+
+    def authenticate_header(self, request):
+        # Optionally, you can set a custom WWW-Authenticate header here.
+        # This is used in the response when authentication fails.
+        return 'Custom realm="api"'
+
+class Auth0Permission(BasePermission):
+    def has_permission(self, request, view):
+        print("HTRTBYUIOBUGYHNIJOHYUGUHN")
+        try:
+            print("JTDFGHJNBVBFGHNBVBFGYJUGFYTR^&V^%^T*&()")
+            id_token = request.META.HTTP_AUTHORIZATION.split(" ")[-1]
+            print("YFGBNUHKM<", request.META.HTTP_AUTHORIZATION)
+            jwks_url = 'https://{}/.well-known/jwks.json'.format(settings.AUTH_0_DOMAIN)
+            issuer = 'https://{}/'.format(settings.AUTH_0_DOMAIN)
+
+            sv = AsymmetricSignatureVerifier(jwks_url)  # Reusable instance
+            tv = TokenVerifier(signature_verifier=sv, issuer=issuer, audience=settings.AUTH_0_AUDIENCE)
+
+            tv.verify(str(id_token))
+            return True
+        except Exception:
+            return False
 
 class AdminAccess(BasePermission):
     def has_permission(self, request, view):

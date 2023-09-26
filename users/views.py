@@ -25,7 +25,7 @@ from school.models import School
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from .utils import OTPgenerate
-
+from utils.custom_permissions import Auth0Permission
 # Create your views here.
 
 
@@ -56,6 +56,8 @@ class RegisterAPI(APIView):
         # Validate the request data and save the new user if validation is successful
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        # do_after_register.delay()
+
 
         # Return a success message in the response
         response = Response(serializer.data, status=200)
@@ -211,7 +213,7 @@ class PasswordChangeAPI(APIView):
 
 
 class UserRolesAPI(APIView):
-    permission_classes = (IsAuthenticated, AdminAccess,)
+    permission_classes = (AllowAny, Auth0Permission,)
 
     def post(self, request):
         # Initialize a CreateRoleSerializer with the request data
